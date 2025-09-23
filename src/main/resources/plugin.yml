@@ -1,0 +1,21 @@
+name: CustomTNTFlow
+main: com.customtntflow.CustomTNTFlowPlugin
+version: 1.1.0
+author: ChatGPT
+description: Highly configurable custom TNT types with API integration for region damage plugins.
+api-version: 1.20
+commands:
+  regiontnt:
+    description: Управление настраиваемыми типами TNT
+    usage: "/<command> help"
+    permission: regiontnt.use
+permissions:
+  regiontnt.use:
+    description: Позволяет просматривать список и получать помощь по команде
+    default: true
+  regiontnt.give:
+    description: Позволяет выдавать пользовательские TNT игрокам
+    default: op
+  regiontnt.reload:
+    description: Позволяет перезагружать конфигурацию плагина
+    default: op

@@ -1,0 +1,40 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.customtnt'
+version = '1.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'spigotmc-repo'
+        url = uri('https://hub.spigotmc.org/nexus/content/repositories/snapshots/')
+    }
+    maven {
+        name = 'sonatype'
+        url = uri('https://oss.sonatype.org/content/repositories/snapshots')
+    }
+}
+
+dependencies {
+    compileOnly 'org.spigotmc:spigot-api:1.20.1-R0.1-SNAPSHOT'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 17
+}
+
+tasks.register('copyPlugin', Copy) {
+    dependsOn tasks.named('jar')
+    from tasks.named('jar')
+    into layout.projectDirectory.dir('build/output')
+}
+
