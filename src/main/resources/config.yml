@@ -27,6 +27,14 @@ defaults:
     drop-blacklist:
       - STONE
       - DEEPSLATE
+      - GRANITE
+      - POLISHED_GRANITE
+      - DIORITE
+      - POLISHED_DIORITE
+      - ANDESITE
+      - POLISHED_ANDESITE
+      - TUFF
+      - CALCITE
       - COAL_ORE
       - DEEPSLATE_COAL_ORE
       - COPPER_ORE
@@ -43,7 +51,6 @@ defaults:
       - DEEPSLATE_EMERALD_ORE
       - NETHER_GOLD_ORE
       - NETHER_QUARTZ_ORE
-      - ANCIENT_DEBRIS
       - DIRT
       - GRASS_BLOCK
       - COARSE_DIRT
@@ -51,7 +58,7 @@ defaults:
       - ROOTED_DIRT
     whitelist-only: false
     whitelist: []
-    blacklist: [BEDROCK, NETHERITE_BLOCK]
+    blacklist: [BEDROCK, NETHERITE_BLOCK, ANCIENT_DEBRIS]
     max-blocks: -1
 
 mixins:

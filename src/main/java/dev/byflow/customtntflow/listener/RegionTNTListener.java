@@ -29,6 +29,7 @@ import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -41,6 +42,7 @@ public class RegionTNTListener implements Listener {
     private final CustomTNTFlowPlugin plugin;
     private final RegionTNTRegistry registry;
     private final ExplosionPipeline explosionPipeline;
+    private final Set<UUID> suppressedExplosions = new HashSet<>();
 
     public RegionTNTListener(CustomTNTFlowPlugin plugin,
                              RegionTNTRegistry registry,
@@ -90,6 +92,9 @@ public class RegionTNTListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onCustomTNTExplode(EntityExplodeEvent event) {
         if (!(event.getEntity() instanceof TNTPrimed tnt)) {
+            return;
+        }
+        if (suppressedExplosions.remove(tnt.getUniqueId())) {
             return;
         }
         var typeOptional = registry.matchEntity(tnt);
@@ -145,6 +150,7 @@ public class RegionTNTListener implements Listener {
         if (customEvent.isCancelled() || behavior.apiOnly()) {
             return;
         }
+        applyEntityDamage(tnt, primed);
         if (!behavior.breakBlocks()) {
             return;
         }
@@ -161,6 +167,16 @@ public class RegionTNTListener implements Listener {
         RegionTNTDetonateEvent customEvent = new RegionTNTDetonateEvent(tnt, type, blocks);
         Bukkit.getPluginManager().callEvent(customEvent);
         return customEvent;
+    }
+
+    private void applyEntityDamage(TNTPrimed tnt, RegionTNTType.PrimedSettings primed) {
+        suppressedExplosions.add(tnt.getUniqueId());
+        try {
+            float power = Math.max(0.1f, primed.power());
+            tnt.getWorld().createExplosion(tnt.getLocation(), power, primed.incendiary(), false, tnt);
+        } finally {
+            suppressedExplosions.remove(tnt.getUniqueId());
+        }
     }
 
     private void processBlockBreaks(List<Block> blocks, boolean dropBlocks, Set<Material> dropBlacklist) {
