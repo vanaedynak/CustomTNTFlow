@@ -59,6 +59,14 @@ mixins:
       whitelist: [OBSIDIAN, CRYING_OBSIDIAN]
 
 types:
+  radius15_water_obsidian:
+    extends: tire_white_base
+    use: [radius15, underwater, obsidian_breaker]
+
+  obsidian_precision:
+    extends: tire_white_base
+    use: [radius15, whitelist_obsidian_only]
+
   tire_white_base:
     item:
       material: TNT
@@ -78,11 +86,17 @@ types:
 
   tire_black:
     extends: tire_white_base
-    use: [radius15, obsidian_breaker, no_drops]
+    use: [radius15, obsidian_breaker]
 
   tire_hydro_black:
     extends: tire_black
     use: [underwater]
+
+  tire_white_big:
+    extends: tire_white
+    use:
+      # можно расширить параметры миксина, если нужно слегка подправить поведение
+      - { radius15: { behavior: { radius: 18.0 } } }
 
 merge:
   lists: "append-dedupe"
