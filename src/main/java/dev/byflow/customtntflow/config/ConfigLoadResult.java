@@ -9,5 +9,6 @@ import java.util.Map;
 public record ConfigLoadResult(Map<String, RegionTNTType> types,
                                Map<String, TypeMetadata> metadata,
                                int mixinCount,
-                               List<String> warnings) {
+                               List<String> warnings,
+                               List<String> errors) {
 }

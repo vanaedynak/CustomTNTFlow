@@ -173,7 +173,16 @@ public class RegionTNTCommand implements CommandExecutor, TabCompleter {
         }
         plugin.reloadEverything();
         sender.sendMessage(ChatColor.GREEN + "Конфигурация перезагружена.");
-        sender.sendMessage(ChatColor.GRAY + "Типов: " + registry.getTypes().size() + ", миксинов: " + registry.getLastMixinCount() + ", предупреждений: " + registry.getLastWarnings().size());
+        sender.sendMessage(ChatColor.GRAY + "Типов: " + registry.getTypes().size()
+                + ", миксинов: " + registry.getLastMixinCount()
+                + ", предупреждений: " + registry.getLastWarnings().size()
+                + ", ошибок: " + registry.getLastErrors().size());
+        if (!registry.getLastErrors().isEmpty()) {
+            sender.sendMessage(ChatColor.RED + "Ошибки:");
+            for (String error : registry.getLastErrors()) {
+                sender.sendMessage(ChatColor.RED + " - " + error);
+            }
+        }
         if (!registry.getLastWarnings().isEmpty()) {
             for (String warning : registry.getLastWarnings()) {
                 sender.sendMessage(ChatColor.YELLOW + " - " + warning);

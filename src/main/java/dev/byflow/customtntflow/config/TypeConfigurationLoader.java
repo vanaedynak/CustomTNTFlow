@@ -45,7 +45,7 @@ public class TypeConfigurationLoader {
         ConfigurationSection section = config.getConfigurationSection("types");
         if (section == null) {
             logger.warn("Конфиг не содержит секцию types.");
-            return new ConfigLoadResult(Map.of(), Map.of(), 0, List.of());
+            return new ConfigLoadResult(Map.of(), Map.of(), 0, List.of(), List.of());
         }
         Map<String, RegionTNTType> result = new LinkedHashMap<>();
         Map<String, TypeMetadata> metadata = new LinkedHashMap<>();
@@ -61,14 +61,14 @@ public class TypeConfigurationLoader {
                 metadata.put(id, new TypeMetadata(id, null, List.of(), false));
             }
         }
-        return new ConfigLoadResult(result, metadata, 0, List.copyOf(warnings));
+        return new ConfigLoadResult(result, metadata, 0, List.copyOf(warnings), List.of());
     }
 
     private ConfigLoadResult loadVersionTwo(FileConfiguration config) {
         ConfigurationSection typesSection = config.getConfigurationSection("types");
         if (typesSection == null) {
             logger.warn("Конфиг версии 2 не содержит секцию types.");
-            return new ConfigLoadResult(Map.of(), Map.of(), 0, List.of());
+            return new ConfigLoadResult(Map.of(), Map.of(), 0, List.of(), List.of());
         }
 
         MergeStrategy mergeStrategy = MergeStrategy.from(config.getConfigurationSection("merge"));
@@ -92,6 +92,7 @@ public class TypeConfigurationLoader {
 
         Map<String, Map<String, Object>> resolvedCache = new HashMap<>();
         List<String> warnings = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
         Map<String, RegionTNTType> resolvedTypes = new LinkedHashMap<>();
         Map<String, TypeMetadata> metadata = new LinkedHashMap<>();
         for (String id : definitions.keySet()) {
@@ -99,7 +100,8 @@ public class TypeConfigurationLoader {
             try {
                 resolvedMap = resolveType(id, definitions, defaults, mixins, mergeStrategy, resolvedCache, new ArrayDeque<>(), warnings);
             } catch (IllegalStateException ex) {
-                logger.error(ex.getMessage());
+                String message = ex.getMessage() == null ? ("Не удалось собрать тип " + id) : ex.getMessage();
+                errors.add(message);
                 continue;
             }
             MemoryConfiguration section = new MemoryConfiguration();
@@ -111,7 +113,7 @@ public class TypeConfigurationLoader {
                 metadata.put(id, toMetadata(definition, !defaults.isEmpty()));
             }
         }
-        return new ConfigLoadResult(resolvedTypes, metadata, mixins.size(), List.copyOf(warnings));
+        return new ConfigLoadResult(resolvedTypes, metadata, mixins.size(), List.copyOf(warnings), List.copyOf(errors));
     }
 
     private Map<String, Object> resolveType(String id,
@@ -129,38 +131,45 @@ public class TypeConfigurationLoader {
             throw new IllegalStateException("Тип " + id + " не найден для разрешения extends/use.");
         }
         if (stack.contains(id)) {
-            stack.addLast(id);
-            throw new IllegalStateException("Обнаружена циклическая зависимость типов: " + String.join(" -> ", stack));
+            Deque<String> cycle = new ArrayDeque<>(stack);
+            cycle.addLast(id);
+            throw new IllegalStateException("Обнаружена циклическая зависимость типов: " + String.join(" -> ", cycle));
         }
         stack.addLast(id);
-        TypeDefinition definition = definitions.get(id);
+        try {
+            TypeDefinition definition = definitions.get(id);
 
-        Map<String, Object> current = deepCopyMap(defaults);
+            Map<String, Object> current = deepCopyMap(defaults);
 
-        if (definition.parentId() != null) {
-            Map<String, Object> parent = resolveType(definition.parentId(), definitions, defaults, mixins, mergeStrategy, cache, stack, warnings);
-            current = mergeStrategy.merge(current, parent);
-        }
-
-        List<MixinReference> mixinRefs = definition.mixins();
-        for (int i = mixinRefs.size() - 1; i >= 0; i--) {
-            MixinReference mixinReference = mixinRefs.get(i);
-            Map<String, Object> mixin = mixins.get(mixinReference.name());
-            if (mixin == null) {
-                warnings.add("Тип " + id + ": миксин " + mixinReference.name() + " не найден");
-                continue;
+            if (definition.parentId() != null) {
+                if (!definitions.containsKey(definition.parentId())) {
+                    throw new IllegalStateException("Тип " + id + ": extends указывает на несуществующий тип " + definition.parentId());
+                }
+                Map<String, Object> parent = resolveType(definition.parentId(), definitions, defaults, mixins, mergeStrategy, cache, stack, warnings);
+                current = mergeStrategy.merge(current, parent);
             }
-            Map<String, Object> mixinCopy = deepCopyMap(mixin);
-            if (!mixinReference.overrides().isEmpty()) {
-                mixinCopy = mergeStrategy.merge(mixinCopy, mixinReference.overrides());
-            }
-            current = mergeStrategy.merge(current, mixinCopy);
-        }
 
-        current = mergeStrategy.merge(current, definition.content());
-        cache.put(id, deepCopyMap(current));
-        stack.removeLast();
-        return deepCopyMap(current);
+            List<MixinReference> mixinRefs = definition.mixins();
+            for (int i = mixinRefs.size() - 1; i >= 0; i--) {
+                MixinReference mixinReference = mixinRefs.get(i);
+                Map<String, Object> mixin = mixins.get(mixinReference.name());
+                if (mixin == null) {
+                    warnings.add("Тип " + id + ": миксин " + mixinReference.name() + " не найден");
+                    continue;
+                }
+                Map<String, Object> mixinCopy = deepCopyMap(mixin);
+                if (!mixinReference.overrides().isEmpty()) {
+                    mixinCopy = mergeStrategy.merge(mixinCopy, mixinReference.overrides());
+                }
+                current = mergeStrategy.merge(current, mixinCopy);
+            }
+
+            current = mergeStrategy.merge(current, definition.content());
+            cache.put(id, deepCopyMap(current));
+            return deepCopyMap(current);
+        } finally {
+            stack.removeLast();
+        }
     }
 
     private Map<String, Map<String, Object>> readMixins(ConfigurationSection section) {

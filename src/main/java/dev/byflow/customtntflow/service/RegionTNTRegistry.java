@@ -50,6 +50,7 @@ public class RegionTNTRegistry {
     private final Map<String, TypeMetadata> metadata = new LinkedHashMap<>();
     private int lastMixinCount = 0;
     private List<String> lastWarnings = List.of();
+    private List<String> lastErrors = List.of();
     private DebugSettings debugSettings = DebugSettings.defaults();
 
     public RegionTNTRegistry(CustomTNTFlowPlugin plugin, PersistentDataKeys dataKeys) {
@@ -72,6 +73,12 @@ public class RegionTNTRegistry {
         metadata.putAll(result.metadata());
         lastMixinCount = result.mixinCount();
         lastWarnings = result.warnings();
+        lastErrors = result.errors();
+        if (!lastErrors.isEmpty()) {
+            for (String error : lastErrors) {
+                logger.error(error);
+            }
+        }
         if (!lastWarnings.isEmpty()) {
             for (String warning : lastWarnings) {
                 logger.warn(warning);
@@ -284,6 +291,10 @@ public class RegionTNTRegistry {
 
     public List<String> getLastWarnings() {
         return lastWarnings;
+    }
+
+    public List<String> getLastErrors() {
+        return lastErrors;
     }
 
     public void applyDebugSettings(DebugSettings settings) {
