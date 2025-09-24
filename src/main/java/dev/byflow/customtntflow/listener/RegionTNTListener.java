@@ -4,6 +4,11 @@ import dev.byflow.customtntflow.CustomTNTFlowPlugin;
 import dev.byflow.customtntflow.api.event.RegionTNTDetonateEvent;
 import dev.byflow.customtntflow.model.RegionTNTType;
 import dev.byflow.customtntflow.service.RegionTNTRegistry;
+import dev.byflow.customtntflow.service.explosion.ExplosionPipeline;
+import dev.byflow.customtntflow.service.explosion.FilterStage;
+import dev.byflow.customtntflow.service.explosion.FinalizeStage;
+import dev.byflow.customtntflow.service.explosion.GeometryStage;
+import dev.byflow.customtntflow.service.explosion.RegionCheckStage;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -17,21 +22,24 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.util.Vector;
-
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 public class RegionTNTListener implements Listener {
 
     private final CustomTNTFlowPlugin plugin;
     private final RegionTNTRegistry registry;
+    private final ExplosionPipeline explosionPipeline;
 
     public RegionTNTListener(CustomTNTFlowPlugin plugin, RegionTNTRegistry registry) {
         this.plugin = plugin;
         this.registry = registry;
+        this.explosionPipeline = new ExplosionPipeline(List.of(
+                new GeometryStage(),
+                new FilterStage(),
+                new RegionCheckStage(null),
+                new FinalizeStage()
+        ));
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -81,7 +89,7 @@ public class RegionTNTListener implements Listener {
         }
 
         boolean shouldCollect = behavior.breakBlocks() || behavior.apiOnly();
-        List<Block> candidateBlocks = shouldCollect ? collectBlocks(tnt, behavior) : new ArrayList<>();
+        List<Block> candidateBlocks = shouldCollect ? explosionPipeline.process(tnt, type, plugin.getSLF4JLogger()) : new ArrayList<>();
         RegionTNTDetonateEvent customEvent = callDetonateEvent(tnt, type, candidateBlocks);
         event.blockList().clear();
         if (customEvent.isCancelled() || behavior.apiOnly()) {
@@ -109,60 +117,5 @@ public class RegionTNTListener implements Listener {
         RegionTNTDetonateEvent customEvent = new RegionTNTDetonateEvent(tnt, type, blocks);
         Bukkit.getPluginManager().callEvent(customEvent);
         return customEvent;
-    }
-
-    private List<Block> collectBlocks(TNTPrimed tnt, RegionTNTType.BlockBehavior behavior) {
-        double radius = Math.max(0.5, behavior.radius());
-        int ceil = (int) Math.ceil(radius);
-        var world = tnt.getWorld();
-        var center = tnt.getLocation();
-        Set<Block> blocks = new LinkedHashSet<>();
-        for (int x = -ceil; x <= ceil; x++) {
-            for (int y = -ceil; y <= ceil; y++) {
-                for (int z = -ceil; z <= ceil; z++) {
-                    Vector offset = new Vector(x, y, z);
-                    if (offset.lengthSquared() > radius * radius) {
-                        continue;
-                    }
-                    Block block = world.getBlockAt(center.clone().add(offset));
-                    if (shouldAffectBlock(block, behavior)) {
-                        blocks.add(block);
-                        if (behavior.maxBlocks() >= 0 && blocks.size() >= behavior.maxBlocks()) {
-                            return new ArrayList<>(blocks);
-                        }
-                    }
-                }
-            }
-        }
-        return new ArrayList<>(blocks);
-    }
-
-    private boolean shouldAffectBlock(Block block, RegionTNTType.BlockBehavior behavior) {
-        Material type = block.getType();
-        if (type.isAir()) {
-            return false;
-        }
-        if (!behavior.allowFluids() && (type == Material.WATER || type == Material.LAVA)) {
-            return false;
-        }
-        if (behavior.blacklist().contains(type)) {
-            return false;
-        }
-        boolean obsidian = type == Material.OBSIDIAN;
-        boolean crying = type == Material.CRYING_OBSIDIAN;
-        if (obsidian && !behavior.allowObsidian()) {
-            return false;
-        }
-        if (crying && !behavior.allowCryingObsidian()) {
-            return false;
-        }
-        if (behavior.whitelistOnly()) {
-            if (!behavior.whitelist().contains(type)) {
-                if (!(obsidian && behavior.allowObsidian()) && !(crying && behavior.allowCryingObsidian())) {
-                    return false;
-                }
-            }
-        }
-        return true;
     }
 }

@@ -87,6 +87,7 @@ public class RegionTNTType {
     public record BlockBehavior(boolean igniteWhenPlaced,
                                  boolean breakBlocks,
                                  double radius,
+                                 ExplosionShape shape,
                                  boolean dropBlocks,
                                  boolean whitelistOnly,
                                  Set<Material> whitelist,
