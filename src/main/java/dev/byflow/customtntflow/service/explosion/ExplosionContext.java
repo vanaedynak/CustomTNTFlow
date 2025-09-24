@@ -15,13 +15,15 @@ public class ExplosionContext {
 
     private final TNTPrimed tnt;
     private final RegionTNTType type;
+    private final RegionTNTType.BlockBehavior behavior;
     private final Logger logger;
     private final Set<Block> blocks = new LinkedHashSet<>();
     private List<Block> finalizedBlocks = List.of();
 
-    public ExplosionContext(TNTPrimed tnt, RegionTNTType type, Logger logger) {
+    public ExplosionContext(TNTPrimed tnt, RegionTNTType type, RegionTNTType.BlockBehavior behavior, Logger logger) {
         this.tnt = tnt;
         this.type = type;
+        this.behavior = behavior;
         this.logger = logger;
     }
 
@@ -34,7 +36,7 @@ public class ExplosionContext {
     }
 
     public RegionTNTType.BlockBehavior behavior() {
-        return type.getBlockBehavior();
+        return behavior;
     }
 
     public Logger logger() {

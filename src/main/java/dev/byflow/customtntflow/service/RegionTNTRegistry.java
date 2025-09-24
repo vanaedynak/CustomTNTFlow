@@ -5,6 +5,7 @@ import dev.byflow.customtntflow.config.ConfigLoadResult;
 import dev.byflow.customtntflow.config.TypeConfigurationLoader;
 import dev.byflow.customtntflow.model.RegionTNTType;
 import dev.byflow.customtntflow.util.PersistentDataKeys;
+import dev.byflow.customtntflow.util.TraitSnapshotParser;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -38,6 +39,7 @@ public class RegionTNTRegistry {
     private final NamespacedKey ownerKey;
     private final NamespacedKey explodeIdKey;
     private final Logger logger;
+    private final TraitSnapshotParser traitParser = new TraitSnapshotParser();
     private final TypeConfigurationLoader configurationLoader;
     private final Map<String, RegionTNTType> types = new LinkedHashMap<>();
     private int lastMixinCount = 0;
@@ -118,7 +120,7 @@ public class RegionTNTRegistry {
             applyPersistentData(container, type.getItemPersistentData());
             container.set(typeKey, PersistentDataType.STRING, type.getId());
             container.set(legacyTypeKey, PersistentDataType.STRING, type.getId());
-            container.set(traitsKey, PersistentDataType.STRING, buildTraitsSnapshot(type));
+            container.set(traitsKey, PersistentDataType.STRING, buildTraitsSnapshot(type.getBlockBehavior()));
             container.set(uuidKey, PersistentDataType.STRING, UUID.randomUUID().toString());
             stack.setItemMeta(meta);
         }
@@ -139,6 +141,13 @@ public class RegionTNTRegistry {
             return Optional.empty();
         }
         return Optional.ofNullable(types.get(id));
+    }
+
+    public boolean isCustom(Entity entity) {
+        if (entity == null) {
+            return false;
+        }
+        return resolveTypeId(entity.getPersistentDataContainer()) != null;
     }
 
     public Optional<RegionTNTType> matchEntity(Entity entity) {
@@ -167,7 +176,7 @@ public class RegionTNTRegistry {
         applyPersistentData(container, type.getEntityPersistentData());
         container.set(typeKey, PersistentDataType.STRING, type.getId());
         container.set(legacyTypeKey, PersistentDataType.STRING, type.getId());
-        container.set(traitsKey, PersistentDataType.STRING, buildTraitsSnapshot(type));
+        container.set(traitsKey, PersistentDataType.STRING, buildTraitsSnapshot(type.getBlockBehavior()));
         UUID uniqueId = resolveSourceUuid(sourceStack).orElseGet(UUID::randomUUID);
         container.set(uuidKey, PersistentDataType.STRING, uniqueId.toString());
         container.set(explodeIdKey, PersistentDataType.STRING, UUID.randomUUID().toString());
@@ -178,6 +187,51 @@ public class RegionTNTRegistry {
         }
         for (String tag : type.getScoreboardTags()) {
             tnt.addScoreboardTag(tag);
+        }
+    }
+
+    public void updateTraits(TNTPrimed tnt, RegionTNTType.BlockBehavior behavior) {
+        if (tnt == null || behavior == null) {
+            return;
+        }
+        tnt.getPersistentDataContainer().set(traitsKey, PersistentDataType.STRING, buildTraitsSnapshot(behavior));
+    }
+
+    public Optional<UUID> resolveOwner(Entity entity) {
+        if (entity == null) {
+            return Optional.empty();
+        }
+        return readUuid(entity.getPersistentDataContainer(), ownerKey);
+    }
+
+    public Optional<UUID> resolveExplodeId(Entity entity) {
+        if (entity == null) {
+            return Optional.empty();
+        }
+        return readUuid(entity.getPersistentDataContainer(), explodeIdKey);
+    }
+
+    public Optional<UUID> resolveUniqueItemId(Entity entity) {
+        if (entity == null) {
+            return Optional.empty();
+        }
+        return readUuid(entity.getPersistentDataContainer(), uuidKey);
+    }
+
+    public Map<String, Object> getEffectiveTraits(Entity entity) {
+        if (entity == null) {
+            return Map.of();
+        }
+        PersistentDataContainer container = entity.getPersistentDataContainer();
+        String raw = container.get(traitsKey, PersistentDataType.STRING);
+        if (raw == null || raw.isBlank()) {
+            return Map.of();
+        }
+        try {
+            return traitParser.parse(raw);
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Не удалось распарсить traits JSON: {}", raw, ex);
+            return Map.of();
         }
     }
 
@@ -255,8 +309,7 @@ public class RegionTNTRegistry {
         return ChatColor.translateAlternateColorCodes('&', text);
     }
 
-    private String buildTraitsSnapshot(RegionTNTType type) {
-        RegionTNTType.BlockBehavior behavior = type.getBlockBehavior();
+    private String buildTraitsSnapshot(RegionTNTType.BlockBehavior behavior) {
         StringBuilder json = new StringBuilder();
         json.append('{');
         boolean first = true;

@@ -15,8 +15,8 @@ public class ExplosionPipeline {
         this.stages = List.copyOf(stages);
     }
 
-    public List<Block> process(TNTPrimed tnt, RegionTNTType type, Logger logger) {
-        ExplosionContext context = new ExplosionContext(tnt, type, logger);
+    public List<Block> process(TNTPrimed tnt, RegionTNTType type, RegionTNTType.BlockBehavior behavior, Logger logger) {
+        ExplosionContext context = new ExplosionContext(tnt, type, behavior, logger);
         for (ExplosionStage stage : stages) {
             stage.apply(context);
         }

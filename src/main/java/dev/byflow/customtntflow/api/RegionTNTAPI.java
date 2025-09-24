@@ -6,6 +6,7 @@ import dev.byflow.customtntflow.service.RegionTNTRegistry;
 import org.bukkit.entity.Entity;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -52,6 +53,32 @@ public final class RegionTNTAPI {
 
     public Optional<RegionTNTType> findType(Entity entity) {
         return registry.matchEntity(entity);
+    }
+
+    public boolean isCustom(Entity entity) {
+        return registry.isCustom(entity);
+    }
+
+    public Optional<RegionTNTType> getType(Entity entity) {
+        return registry.matchEntity(entity);
+    }
+
+    public Optional<RegionTNTType> getType(ItemStack stack) {
+        return registry.matchItem(stack);
+    }
+
+    public Optional<RegionTNTType> getType(EntityOrItem entityOrItem) {
+        if (entityOrItem == null) {
+            return Optional.empty();
+        }
+        if (entityOrItem.entity().isPresent()) {
+            return registry.matchEntity(entityOrItem.entity().get());
+        }
+        return entityOrItem.itemStack().flatMap(registry::matchItem);
+    }
+
+    public Map<String, Object> getEffectiveTraits(Entity entity) {
+        return registry.getEffectiveTraits(entity);
     }
 
     public RegionTNTRegistry getRegistry() {
