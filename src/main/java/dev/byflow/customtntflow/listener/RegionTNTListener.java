@@ -13,6 +13,7 @@ import dev.byflow.customtntflow.service.explosion.FilterStage;
 import dev.byflow.customtntflow.service.explosion.FinalizeStage;
 import dev.byflow.customtntflow.service.explosion.GeometryStage;
 import dev.byflow.customtntflow.service.explosion.RegionCheckStage;
+import dev.byflow.customtntflow.service.region.RegionIntegrationService;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -38,13 +39,15 @@ public class RegionTNTListener implements Listener {
     private final RegionTNTRegistry registry;
     private final ExplosionPipeline explosionPipeline;
 
-    public RegionTNTListener(CustomTNTFlowPlugin plugin, RegionTNTRegistry registry) {
+    public RegionTNTListener(CustomTNTFlowPlugin plugin,
+                             RegionTNTRegistry registry,
+                             RegionIntegrationService regionIntegrationService) {
         this.plugin = plugin;
         this.registry = registry;
         this.explosionPipeline = new ExplosionPipeline(List.of(
                 new GeometryStage(),
                 new FilterStage(),
-                new RegionCheckStage(null),
+                new RegionCheckStage(regionIntegrationService),
                 new FinalizeStage()
         ));
     }
@@ -92,11 +95,11 @@ public class RegionTNTListener implements Listener {
         }
         RegionTNTType type = typeOptional.get();
         RegionTNTType.PrimedSettings primed = type.getPrimedSettings();
+        UUID ownerUuid = registry.resolveOwner(tnt).orElse(null);
 
         if (!primed.explodeInWater() && (tnt.isInWater() || event.getLocation().getBlock().isLiquid())) {
             event.blockList().clear();
             RegionTNTDetonateEvent waterEvent = callDetonateEvent(tnt, type, List.of());
-            UUID ownerUuid = registry.resolveOwner(tnt).orElse(null);
             Bukkit.getPluginManager().callEvent(new CustomTNTExplodeEvent(tnt, type, waterEvent.getAffectedBlocks(), ownerUuid));
             return;
         }
@@ -114,7 +117,7 @@ public class RegionTNTListener implements Listener {
         boolean hasAffectListeners = CustomTNTAffectEvent.getHandlerList().getRegisteredListeners().length > 0;
         boolean shouldCollect = behavior.breakBlocks() || behavior.apiOnly() || hasAffectListeners;
         List<Block> candidateBlocks = shouldCollect
-                ? explosionPipeline.process(tnt, type, behavior, plugin.getSLF4JLogger())
+                ? explosionPipeline.process(tnt, type, behavior, plugin.getSLF4JLogger(), ownerUuid)
                 : new ArrayList<>();
         Set<Block> mutableBlocks = new LinkedHashSet<>(candidateBlocks);
         CustomTNTAffectEvent affectEvent = new CustomTNTAffectEvent(tnt, type, mutableBlocks);
@@ -130,7 +133,6 @@ public class RegionTNTListener implements Listener {
 
         RegionTNTDetonateEvent customEvent = callDetonateEvent(tnt, type, finalBlocks);
         event.blockList().clear();
-        UUID ownerUuid = registry.resolveOwner(tnt).orElse(null);
         Bukkit.getPluginManager().callEvent(new CustomTNTExplodeEvent(tnt, type, customEvent.getAffectedBlocks(), ownerUuid));
         if (customEvent.isCancelled() || behavior.apiOnly()) {
             return;

@@ -1,31 +1,29 @@
 package dev.byflow.customtntflow.service.explosion;
 
+import dev.byflow.customtntflow.service.region.RegionIntegrationService;
 import org.bukkit.block.Block;
 
 import java.util.Iterator;
-import java.util.Objects;
 
 public class RegionCheckStage implements ExplosionStage {
 
-    private final RegionPermissionEvaluator evaluator;
+    private final RegionIntegrationService integrationService;
 
-    public RegionCheckStage(RegionPermissionEvaluator evaluator) {
-        this.evaluator = Objects.requireNonNullElseGet(evaluator, () -> (context, block) -> true);
+    public RegionCheckStage(RegionIntegrationService integrationService) {
+        this.integrationService = integrationService;
     }
 
     @Override
     public void apply(ExplosionContext context) {
+        if (integrationService == null || !integrationService.isFeatureEnabled()) {
+            return;
+        }
         Iterator<Block> iterator = context.blocks().iterator();
         while (iterator.hasNext()) {
             Block block = iterator.next();
-            if (!evaluator.canAffect(context, block)) {
+            if (!integrationService.canAffect(context, block)) {
                 iterator.remove();
             }
         }
-    }
-
-    @FunctionalInterface
-    public interface RegionPermissionEvaluator {
-        boolean canAffect(ExplosionContext context, Block block);
     }
 }

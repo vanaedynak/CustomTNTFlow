@@ -4,6 +4,12 @@ messages:
     enabled: true
     text: "&e[{type}] заряд активирован! Радиус: {radius}"
 
+settings:
+  region-checks:
+    enabled: true
+    mode: STRICT
+    deny-message: "&cЗдесь нельзя подрывать."
+
 version: 2
 
 defaults:

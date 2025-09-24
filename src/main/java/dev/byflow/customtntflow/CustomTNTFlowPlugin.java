@@ -4,6 +4,7 @@ import dev.byflow.customtntflow.api.RegionTNTAPI;
 import dev.byflow.customtntflow.listener.RegionTNTListener;
 import dev.byflow.customtntflow.service.RegionTNTRegistry;
 import dev.byflow.customtntflow.service.command.RegionTNTCommand;
+import dev.byflow.customtntflow.service.region.RegionIntegrationService;
 import dev.byflow.customtntflow.util.PersistentDataKeys;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.slf4j.Logger;
@@ -13,6 +14,7 @@ public class CustomTNTFlowPlugin extends JavaPlugin {
     private Logger logger;
     private RegionTNTRegistry registry;
     private PersistentDataKeys persistentDataKeys;
+    private RegionIntegrationService regionIntegrationService;
 
     @Override
     public void onEnable() {
@@ -21,13 +23,15 @@ public class CustomTNTFlowPlugin extends JavaPlugin {
         saveDefaultConfig();
 
         this.persistentDataKeys = new PersistentDataKeys(this);
+        this.regionIntegrationService = new RegionIntegrationService(this);
         this.registry = new RegionTNTRegistry(this, persistentDataKeys);
         this.registry.reloadFromConfig();
+        this.regionIntegrationService.reload();
 
         RegionTNTAPI.initialize(this, registry);
 
         var pluginManager = getServer().getPluginManager();
-        pluginManager.registerEvents(new RegionTNTListener(this, registry), this);
+        pluginManager.registerEvents(new RegionTNTListener(this, registry, regionIntegrationService), this);
 
         var command = getCommand("tntflow");
         if (command != null) {
@@ -53,6 +57,7 @@ public class CustomTNTFlowPlugin extends JavaPlugin {
     public void reloadEverything() {
         reloadConfig();
         registry.reloadFromConfig();
+        regionIntegrationService.reload();
         if (logger != null) {
             int warningCount = registry.getLastWarnings().size();
             logger.info("Configuration reloaded. Types: {}, mixins: {}, warnings: {}",
