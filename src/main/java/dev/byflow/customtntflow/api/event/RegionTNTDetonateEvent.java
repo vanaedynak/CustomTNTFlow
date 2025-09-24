@@ -1,6 +1,6 @@
-package com.customtntflow.api.event;
+package dev.byflow.customtntflow.api.event;
 
-import com.customtntflow.type.RegionTNTType;
+import dev.byflow.customtntflow.model.RegionTNTType;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.TNTPrimed;
@@ -12,11 +12,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * Событие вызывается непосредственно перед тем, как плагин начнёт обрабатывать ломание блоков
- * вокруг пользовательского TNT. Вы можете отменить событие, чтобы полностью запретить воздействие на блоки,
- * либо модифицировать {@link #getAffectedBlocks()} (например, удалить или добавить блоки).
- */
 public class RegionTNTDetonateEvent extends Event implements Cancellable {
 
     private static final HandlerList HANDLERS = new HandlerList();
