@@ -1,0 +1,143 @@
+# Общие сообщения плагина
+messages:
+  on-place:
+    enabled: true
+    text: "&e[{type}] заряд активирован! Радиус: {radius}"
+
+settings:
+  debug:
+    log-compiled-types: false
+    log-merge-sources: false
+    trace-explosion: false
+  region-checks:
+    enabled: true
+    mode: STRICT
+    deny-message: "&cЗдесь нельзя подрывать."
+
+version: 2
+
+defaults:
+  primed:
+    fuse-ticks: 60
+  behavior:
+    ignite-when-placed: true
+    break-blocks: true
+    api-only: false
+    drop-blocks: true
+    drop-blacklist:
+      - STONE
+      - DEEPSLATE
+      - GRANITE
+      - POLISHED_GRANITE
+      - DIORITE
+      - POLISHED_DIORITE
+      - ANDESITE
+      - POLISHED_ANDESITE
+      - TUFF
+      - CALCITE
+      - COAL_ORE
+      - DEEPSLATE_COAL_ORE
+      - COPPER_ORE
+      - DEEPSLATE_COPPER_ORE
+      - IRON_ORE
+      - DEEPSLATE_IRON_ORE
+      - GOLD_ORE
+      - DEEPSLATE_GOLD_ORE
+      - REDSTONE_ORE
+      - DEEPSLATE_REDSTONE_ORE
+      - LAPIS_ORE
+      - DEEPSLATE_LAPIS_ORE
+      - EMERALD_ORE
+      - DEEPSLATE_EMERALD_ORE
+      - NETHER_GOLD_ORE
+      - NETHER_QUARTZ_ORE
+      - DIRT
+      - GRASS_BLOCK
+      - COARSE_DIRT
+      - PODZOL
+      - ROOTED_DIRT
+    whitelist-only: false
+    whitelist: []
+    blacklist: [BEDROCK, NETHERITE_BLOCK, ANCIENT_DEBRIS]
+    max-blocks: -1
+
+mixins:
+  radius15:
+    behavior:
+      radius: 15.0
+
+  underwater:
+    primed:
+      explode-in-water: true
+    behavior:
+      allow-fluids: true
+
+  obsidian_breaker:
+    behavior:
+      allow-obsidian: true
+      allow-crying-obsidian: true
+
+  no_drops:
+    behavior:
+      drop-blocks: false
+
+  drops:
+    behavior:
+      drop-blocks: true
+
+  whitelist_obsidian_only:
+    behavior:
+      whitelist-only: true
+      whitelist: [OBSIDIAN, CRYING_OBSIDIAN]
+
+  whitelist_netherite_example:
+    behavior:
+      whitelist-only: true
+      whitelist:
+        - STONE
+        - DIRT
+        - NETHERITE_BLOCK # пример: перечислите блоки, которые разрешено ломать
+
+types:
+  radius15_water_obsidian:
+    extends: tire_white_base
+    use: [radius15, underwater, obsidian_breaker]
+
+  obsidian_precision:
+    extends: tire_white_base
+    use: [radius15, whitelist_obsidian_only]
+
+  tire_white_base:
+    item:
+      material: TNT
+      display-name: "&f&lTire White &7[TNT]"
+      lore:
+        - "&7Базовый каст-TNT"
+      persistent-data:
+        variant: tire_white
+    primed:
+      custom-name: "&f&lTire White"
+      show-name: false
+    behavior: {}
+
+  tire_white:
+    extends: tire_white_base
+    use: [radius15, drops]
+
+  tire_black:
+    extends: tire_white_base
+    use: [radius15, obsidian_breaker, drops]
+
+  tire_hydro_black:
+    extends: tire_black
+    use: [underwater]
+
+  tire_white_big:
+    extends: tire_white
+    use:
+      # можно расширить параметры миксина, если нужно слегка подправить поведение
+      - { radius15: { behavior: { radius: 18.0 } } }
+
+merge:
+  lists: "append-dedupe"
+  maps: "deep"
