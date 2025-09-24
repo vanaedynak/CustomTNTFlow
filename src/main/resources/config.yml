@@ -23,7 +23,7 @@ defaults:
     ignite-when-placed: true
     break-blocks: true
     api-only: false
-    drop-blocks: false
+    drop-blocks: true
     whitelist-only: false
     whitelist: []
     blacklist: [BEDROCK]
@@ -82,11 +82,11 @@ types:
 
   tire_white:
     extends: tire_white_base
-    use: [radius15, no_drops]
+    use: [radius15, drops]
 
   tire_black:
     extends: tire_white_base
-    use: [radius15, obsidian_breaker]
+    use: [radius15, obsidian_breaker, drops]
 
   tire_hydro_black:
     extends: tire_black

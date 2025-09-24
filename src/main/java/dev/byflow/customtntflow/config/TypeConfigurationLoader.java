@@ -357,14 +357,14 @@ public class TypeConfigurationLoader {
 
     private RegionTNTType.BlockBehavior parseBlockBehavior(ConfigurationSection section, List<String> warnings, String typeId) {
         if (section == null) {
-            RegionTNTType.BlockBehavior behavior = new RegionTNTType.BlockBehavior(true, false, 4.0, ExplosionShape.SPHERE, false, false, Set.of(), Set.of(), false, false, false, -1, false);
+            RegionTNTType.BlockBehavior behavior = new RegionTNTType.BlockBehavior(true, false, 4.0, ExplosionShape.SPHERE, true, false, Set.of(), Set.of(), false, false, false, -1, false);
             return validateBehavior(behavior, warnings, typeId);
         }
         boolean igniteWhenPlaced = section.getBoolean("ignite-when-placed", true);
         boolean breakBlocks = section.getBoolean("break-blocks", false);
         double radius = section.getDouble("radius", 4.0);
         ExplosionShape shape = ExplosionShape.fromConfig(section.getString("shape"));
-        boolean dropBlocks = section.getBoolean("drop-blocks", false);
+        boolean dropBlocks = section.getBoolean("drop-blocks", true);
         boolean whitelistOnly = section.getBoolean("whitelist-only", false);
         Set<Material> whitelist = parseMaterials(section.getStringList("whitelist"));
         Set<Material> blacklist = parseMaterials(section.getStringList("blacklist"));
