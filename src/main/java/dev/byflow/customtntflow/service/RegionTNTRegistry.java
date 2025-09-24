@@ -3,7 +3,10 @@ package dev.byflow.customtntflow.service;
 import dev.byflow.customtntflow.CustomTNTFlowPlugin;
 import dev.byflow.customtntflow.config.ConfigLoadResult;
 import dev.byflow.customtntflow.config.TypeConfigurationLoader;
+import dev.byflow.customtntflow.model.DebugFlag;
+import dev.byflow.customtntflow.model.DebugSettings;
 import dev.byflow.customtntflow.model.RegionTNTType;
+import dev.byflow.customtntflow.model.TypeMetadata;
 import dev.byflow.customtntflow.util.PersistentDataKeys;
 import dev.byflow.customtntflow.util.TraitSnapshotParser;
 import org.bukkit.ChatColor;
@@ -22,12 +25,14 @@ import org.slf4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class RegionTNTRegistry {
 
@@ -42,8 +47,10 @@ public class RegionTNTRegistry {
     private final TraitSnapshotParser traitParser = new TraitSnapshotParser();
     private final TypeConfigurationLoader configurationLoader;
     private final Map<String, RegionTNTType> types = new LinkedHashMap<>();
+    private final Map<String, TypeMetadata> metadata = new LinkedHashMap<>();
     private int lastMixinCount = 0;
     private List<String> lastWarnings = List.of();
+    private DebugSettings debugSettings = DebugSettings.defaults();
 
     public RegionTNTRegistry(CustomTNTFlowPlugin plugin, PersistentDataKeys dataKeys) {
         this.plugin = plugin;
@@ -59,14 +66,22 @@ public class RegionTNTRegistry {
 
     public void reloadFromConfig() {
         types.clear();
+        metadata.clear();
         ConfigLoadResult result = configurationLoader.load(plugin.getConfig());
         types.putAll(result.types());
+        metadata.putAll(result.metadata());
         lastMixinCount = result.mixinCount();
         lastWarnings = result.warnings();
         if (!lastWarnings.isEmpty()) {
             for (String warning : lastWarnings) {
                 logger.warn(warning);
             }
+        }
+        if (debugSettings.logMergeSources()) {
+            logMergeSourcesSnapshot();
+        }
+        if (debugSettings.logCompiledTypes()) {
+            logCompiledTypesSnapshot();
         }
         logger.info("Загружено типов TNT: {}, миксинов: {}", types.size(), lastMixinCount);
     }
@@ -77,6 +92,30 @@ public class RegionTNTRegistry {
 
     public RegionTNTType getType(String id) {
         return types.get(id);
+    }
+
+    public Optional<TypeMetadata> getMetadata(String id) {
+        return Optional.ofNullable(metadata.get(id));
+    }
+
+    public Map<String, TypeMetadata> getMetadataSnapshot() {
+        return Map.copyOf(metadata);
+    }
+
+    public List<String> resolveInheritanceChain(String id) {
+        List<String> chain = new ArrayList<>();
+        Set<String> visited = new LinkedHashSet<>();
+        TypeMetadata current = metadata.get(id);
+        while (current != null && current.hasParent()) {
+            String parent = current.parentId();
+            if (!visited.add(parent)) {
+                chain.add(parent + " (cycle)");
+                break;
+            }
+            chain.add(parent);
+            current = metadata.get(parent);
+        }
+        return chain;
     }
 
     public ItemStack createItem(String id, int amount) {
@@ -94,12 +133,12 @@ public class RegionTNTRegistry {
         ItemMeta meta = stack.getItemMeta();
         if (meta != null) {
             if (settings.displayName() != null) {
-                meta.setDisplayName(color(settings.displayName()));
+                meta.setDisplayName(color(applyItemPlaceholders(settings.displayName(), type)));
             }
             if (!settings.lore().isEmpty()) {
                 List<String> lore = new ArrayList<>();
                 for (String line : settings.lore()) {
-                    lore.add(color(line));
+                    lore.add(color(applyItemPlaceholders(line, type)));
                 }
                 meta.setLore(lore);
             }
@@ -247,6 +286,18 @@ public class RegionTNTRegistry {
         return lastWarnings;
     }
 
+    public void applyDebugSettings(DebugSettings settings) {
+        this.debugSettings = settings != null ? settings : DebugSettings.defaults();
+    }
+
+    public void emitDebugSnapshot(DebugFlag flag) {
+        if (flag == DebugFlag.LOG_COMPILED_TYPES) {
+            logCompiledTypesSnapshot();
+        } else if (flag == DebugFlag.LOG_MERGE_SOURCES) {
+            logMergeSourcesSnapshot();
+        }
+    }
+
     private void applyPersistentData(PersistentDataContainer container, Map<String, String> data) {
         data.forEach((key, value) -> {
             NamespacedKey namespacedKey = toKey(key);
@@ -307,6 +358,113 @@ public class RegionTNTRegistry {
 
     private String color(String text) {
         return ChatColor.translateAlternateColorCodes('&', text);
+    }
+
+    private String applyItemPlaceholders(String text, RegionTNTType type) {
+        if (text == null) {
+            return null;
+        }
+        RegionTNTType.BlockBehavior behavior = type.getBlockBehavior();
+        RegionTNTType.PrimedSettings primed = type.getPrimedSettings();
+        String replaced = text.replace("{radius}", formatRadius(behavior.radius()));
+        replaced = replaced.replace("{drops}", behavior.dropBlocks() ? "Да" : "Нет");
+        boolean obsidian = behavior.allowObsidian() || behavior.allowCryingObsidian();
+        replaced = replaced.replace("{obsidian}", obsidian ? "Да" : "Нет");
+        boolean water = primed.explodeInWater() && behavior.allowFluids();
+        replaced = replaced.replace("{water}", water ? "Да" : "Нет");
+        return replaced;
+    }
+
+    private String formatRadius(double radius) {
+        return String.format(Locale.ROOT, "%.1f", radius);
+    }
+
+    private void logMergeSourcesSnapshot() {
+        for (RegionTNTType type : types.values()) {
+            TypeMetadata meta = metadata.get(type.getId());
+            if (meta == null) {
+                continue;
+            }
+            List<String> chain = resolveInheritanceChain(type.getId());
+            String inheritance = chain.isEmpty() ? "(нет)" : String.join(" -> ", chain);
+            String mixinInfo = meta.mixins().isEmpty()
+                    ? "(нет)"
+                    : meta.mixins().stream().map(this::formatMixin).collect(Collectors.joining(", "));
+            logger.info("[debug] Тип {}: extends={}, mixins={}, defaults={}",
+                    type.getId(),
+                    inheritance,
+                    mixinInfo,
+                    meta.defaultsApplied() ? "включены" : "нет");
+        }
+    }
+
+    private void logCompiledTypesSnapshot() {
+        for (RegionTNTType type : types.values()) {
+            RegionTNTType.BlockBehavior behavior = type.getBlockBehavior();
+            logger.info(
+                    "[debug] Параметры {} => radius={}, shape={}, break-blocks={}, drop-blocks={}, allow-fluids={}, allow-obsidian={}, allow-crying-obsidian={}, whitelist-only={}, whitelist={}, blacklist={}, max-blocks={}, api-only={}",
+                    type.getId(),
+                    formatRadius(behavior.radius()),
+                    behavior.shape(),
+                    behavior.breakBlocks(),
+                    behavior.dropBlocks(),
+                    behavior.allowFluids(),
+                    behavior.allowObsidian(),
+                    behavior.allowCryingObsidian(),
+                    behavior.whitelistOnly(),
+                    formatMaterials(behavior.whitelist()),
+                    formatMaterials(behavior.blacklist()),
+                    behavior.maxBlocks(),
+                    behavior.apiOnly());
+        }
+    }
+
+    private String formatMixin(TypeMetadata.MixinMetadata mixin) {
+        if (mixin == null) {
+            return "";
+        }
+        if (!mixin.hasOverrides()) {
+            return mixin.name();
+        }
+        return mixin.name() + formatOverrides(mixin.overrides());
+    }
+
+    private String formatOverrides(Map<String, Object> overrides) {
+        StringBuilder builder = new StringBuilder("{");
+        boolean first = true;
+        for (Map.Entry<String, Object> entry : overrides.entrySet()) {
+            if (!first) {
+                builder.append(", ");
+            }
+            builder.append(entry.getKey()).append('=');
+            builder.append(formatOverrideValue(entry.getValue()));
+            first = false;
+        }
+        builder.append('}');
+        return builder.toString();
+    }
+
+    private String formatOverrideValue(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> normalized = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                if (entry.getKey() != null) {
+                    normalized.put(entry.getKey().toString(), entry.getValue());
+                }
+            }
+            return formatOverrides(normalized);
+        }
+        if (value instanceof Collection<?> collection) {
+            return collection.stream().map(Object::toString).collect(Collectors.joining(", ", "[", "]"));
+        }
+        return String.valueOf(value);
+    }
+
+    private String formatMaterials(Set<Material> materials) {
+        if (materials == null || materials.isEmpty()) {
+            return "[]";
+        }
+        return materials.stream().map(Material::name).collect(Collectors.joining(", ", "[", "]"));
     }
 
     private String buildTraitsSnapshot(RegionTNTType.BlockBehavior behavior) {

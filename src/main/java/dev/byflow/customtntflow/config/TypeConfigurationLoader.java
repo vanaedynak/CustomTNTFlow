@@ -2,6 +2,7 @@ package dev.byflow.customtntflow.config;
 
 import dev.byflow.customtntflow.model.ExplosionShape;
 import dev.byflow.customtntflow.model.RegionTNTType;
+import dev.byflow.customtntflow.model.TypeMetadata;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.MemoryConfiguration;
@@ -44,9 +45,10 @@ public class TypeConfigurationLoader {
         ConfigurationSection section = config.getConfigurationSection("types");
         if (section == null) {
             logger.warn("Конфиг не содержит секцию types.");
-            return new ConfigLoadResult(Map.of(), 0, List.of());
+            return new ConfigLoadResult(Map.of(), Map.of(), 0, List.of());
         }
         Map<String, RegionTNTType> result = new LinkedHashMap<>();
+        Map<String, TypeMetadata> metadata = new LinkedHashMap<>();
         List<String> warnings = new ArrayList<>();
         for (String id : section.getKeys(false)) {
             ConfigurationSection typeSection = section.getConfigurationSection(id);
@@ -56,16 +58,17 @@ public class TypeConfigurationLoader {
             RegionTNTType type = parseType(id, typeSection, warnings);
             if (type != null) {
                 result.put(id, type);
+                metadata.put(id, new TypeMetadata(id, null, List.of(), false));
             }
         }
-        return new ConfigLoadResult(result, 0, List.copyOf(warnings));
+        return new ConfigLoadResult(result, metadata, 0, List.copyOf(warnings));
     }
 
     private ConfigLoadResult loadVersionTwo(FileConfiguration config) {
         ConfigurationSection typesSection = config.getConfigurationSection("types");
         if (typesSection == null) {
             logger.warn("Конфиг версии 2 не содержит секцию types.");
-            return new ConfigLoadResult(Map.of(), 0, List.of());
+            return new ConfigLoadResult(Map.of(), Map.of(), 0, List.of());
         }
 
         MergeStrategy mergeStrategy = MergeStrategy.from(config.getConfigurationSection("merge"));
@@ -90,6 +93,7 @@ public class TypeConfigurationLoader {
         Map<String, Map<String, Object>> resolvedCache = new HashMap<>();
         List<String> warnings = new ArrayList<>();
         Map<String, RegionTNTType> resolvedTypes = new LinkedHashMap<>();
+        Map<String, TypeMetadata> metadata = new LinkedHashMap<>();
         for (String id : definitions.keySet()) {
             Map<String, Object> resolvedMap;
             try {
@@ -103,9 +107,11 @@ public class TypeConfigurationLoader {
             RegionTNTType type = parseType(id, section, warnings);
             if (type != null) {
                 resolvedTypes.put(id, type);
+                TypeDefinition definition = definitions.get(id);
+                metadata.put(id, toMetadata(definition, !defaults.isEmpty()));
             }
         }
-        return new ConfigLoadResult(resolvedTypes, mixins.size(), List.copyOf(warnings));
+        return new ConfigLoadResult(resolvedTypes, metadata, mixins.size(), List.copyOf(warnings));
     }
 
     private Map<String, Object> resolveType(String id,
@@ -426,6 +432,14 @@ public class TypeConfigurationLoader {
         return map;
     }
 
+    private TypeMetadata toMetadata(TypeDefinition definition, boolean defaultsApplied) {
+        List<TypeMetadata.MixinMetadata> mixinMetadata = new ArrayList<>();
+        for (MixinReference reference : definition.mixins()) {
+            mixinMetadata.add(new TypeMetadata.MixinMetadata(reference.name(), deepCopyMap(reference.overrides())));
+        }
+        return new TypeMetadata(definition.id(), definition.parentId(), mixinMetadata, defaultsApplied);
+    }
+
     private record TypeDefinition(String id,
                                   Map<String, Object> content,
                                   String parentId,
@@ -433,6 +447,9 @@ public class TypeConfigurationLoader {
     }
 
     private record MixinReference(String name, Map<String, Object> overrides) {
+        MixinReference {
+            overrides = overrides == null ? Map.of() : Map.copyOf(overrides);
+        }
     }
 
     private static class MergeStrategy {

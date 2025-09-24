@@ -20,11 +20,21 @@ public class ExplosionPipeline {
                                RegionTNTType type,
                                RegionTNTType.BlockBehavior behavior,
                                Logger logger,
-                               UUID ownerUuid) {
+                               UUID ownerUuid,
+                               boolean trace) {
         ExplosionContext context = new ExplosionContext(tnt, type, behavior, logger, ownerUuid);
         for (ExplosionStage stage : stages) {
+            int before = context.blocks().size();
             stage.apply(context);
+            if (trace && logger != null) {
+                int after = context.blocks().size();
+                logger.info("[trace:{}] Stage {} — blocks {} -> {}", type.getId(), stage.getClass().getSimpleName(), before, after);
+            }
         }
-        return context.finalizedBlocks();
+        List<Block> finalized = context.finalizedBlocks();
+        if (trace && logger != null) {
+            logger.info("[trace:{}] Pipeline итог: {} блоков", type.getId(), finalized.size());
+        }
+        return finalized;
     }
 }

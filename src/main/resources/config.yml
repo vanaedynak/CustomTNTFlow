@@ -5,6 +5,10 @@ messages:
     text: "&e[{type}] заряд активирован! Радиус: {radius}"
 
 settings:
+  debug:
+    log-compiled-types: false
+    log-merge-sources: false
+    trace-explosion: false
   region-checks:
     enabled: true
     mode: STRICT

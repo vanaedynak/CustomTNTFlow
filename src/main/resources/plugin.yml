@@ -9,6 +9,7 @@ commands:
     description: Custom TNTFlow administration command
     usage: "/<command> reload"
     permission: customtntflow.admin
+    aliases: [regiontnt]
 permissions:
   customtntflow.admin:
     description: Allows administrating CustomTNTFlow features

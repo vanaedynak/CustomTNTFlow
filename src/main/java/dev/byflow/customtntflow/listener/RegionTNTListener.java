@@ -27,6 +27,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.scheduler.BukkitRunnable;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -34,6 +35,8 @@ import java.util.Set;
 import java.util.UUID;
 
 public class RegionTNTListener implements Listener {
+
+    private static final int BLOCKS_PER_TICK = 3000;
 
     private final CustomTNTFlowPlugin plugin;
     private final RegionTNTRegistry registry;
@@ -116,8 +119,9 @@ public class RegionTNTListener implements Listener {
 
         boolean hasAffectListeners = CustomTNTAffectEvent.getHandlerList().getRegisteredListeners().length > 0;
         boolean shouldCollect = behavior.breakBlocks() || behavior.apiOnly() || hasAffectListeners;
+        boolean trace = plugin.getDebugSettings().traceExplosion();
         List<Block> candidateBlocks = shouldCollect
-                ? explosionPipeline.process(tnt, type, behavior, plugin.getSLF4JLogger(), ownerUuid)
+                ? explosionPipeline.process(tnt, type, behavior, plugin.getSLF4JLogger(), ownerUuid, trace)
                 : new ArrayList<>();
         Set<Block> mutableBlocks = new LinkedHashSet<>(candidateBlocks);
         CustomTNTAffectEvent affectEvent = new CustomTNTAffectEvent(tnt, type, mutableBlocks);
@@ -129,6 +133,10 @@ public class RegionTNTListener implements Listener {
                 plugin.getSLF4JLogger().warn("Тип {} превысил лимит max-blocks ({}). Остальные блоки будут проигнорированы.", type.getId(), maxBlocks);
             }
             finalBlocks = new ArrayList<>(finalBlocks.subList(0, maxBlocks));
+        }
+
+        if (trace) {
+            plugin.getPluginLogger().info("[trace:{}] После событий: кандидаты={}, финал={}", type.getId(), candidateBlocks.size(), finalBlocks.size());
         }
 
         RegionTNTDetonateEvent customEvent = callDetonateEvent(tnt, type, finalBlocks);
@@ -145,18 +153,58 @@ public class RegionTNTListener implements Listener {
             blocksToBreak = new ArrayList<>(blocksToBreak.subList(0, maxBlocks));
         }
         boolean dropBlocks = behavior.dropBlocks();
-        for (Block block : blocksToBreak) {
-            if (dropBlocks) {
-                block.breakNaturally();
-            } else {
-                block.setType(Material.AIR, false);
-            }
-        }
+        processBlockBreaks(blocksToBreak, dropBlocks);
     }
 
     private RegionTNTDetonateEvent callDetonateEvent(TNTPrimed tnt, RegionTNTType type, List<Block> blocks) {
         RegionTNTDetonateEvent customEvent = new RegionTNTDetonateEvent(tnt, type, blocks);
         Bukkit.getPluginManager().callEvent(customEvent);
         return customEvent;
+    }
+
+    private void processBlockBreaks(List<Block> blocks, boolean dropBlocks) {
+        if (blocks.isEmpty()) {
+            return;
+        }
+        if (blocks.size() <= BLOCKS_PER_TICK) {
+            breakBatch(blocks, dropBlocks);
+            return;
+        }
+        List<Block> queue = new ArrayList<>(blocks);
+        new BukkitRunnable() {
+            private int index = 0;
+
+            @Override
+            public void run() {
+                int processed = 0;
+                while (index < queue.size() && processed < BLOCKS_PER_TICK) {
+                    breakBlock(queue.get(index++), dropBlocks);
+                    processed++;
+                }
+                if (index >= queue.size()) {
+                    cancel();
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 1L);
+    }
+
+    private void breakBatch(List<Block> blocks, boolean dropBlocks) {
+        for (Block block : blocks) {
+            breakBlock(block, dropBlocks);
+        }
+    }
+
+    private void breakBlock(Block block, boolean dropBlocks) {
+        var world = block.getWorld();
+        int chunkX = block.getX() >> 4;
+        int chunkZ = block.getZ() >> 4;
+        if (!world.isChunkLoaded(chunkX, chunkZ)) {
+            return;
+        }
+        if (dropBlocks) {
+            block.breakNaturally();
+        } else {
+            block.setType(Material.AIR, false);
+        }
     }
 }
