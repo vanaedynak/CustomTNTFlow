@@ -1,19 +1,21 @@
-package com.customtntflow.type;
+package dev.byflow.customtntflow.service;
 
-import com.customtntflow.CustomTNTFlowPlugin;
+import dev.byflow.customtntflow.CustomTNTFlowPlugin;
+import dev.byflow.customtntflow.model.RegionTNTType;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.TNTPrimed;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.TNTPrimed;
+import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -24,17 +26,18 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.logging.Level;
 
 public class RegionTNTRegistry {
 
     private final CustomTNTFlowPlugin plugin;
     private final NamespacedKey typeKey;
+    private final Logger logger;
     private final Map<String, RegionTNTType> types = new LinkedHashMap<>();
 
     public RegionTNTRegistry(CustomTNTFlowPlugin plugin, NamespacedKey typeKey) {
         this.plugin = plugin;
         this.typeKey = typeKey;
+        this.logger = plugin.getSLF4JLogger();
     }
 
     public void reloadFromConfig() {
@@ -42,7 +45,7 @@ public class RegionTNTRegistry {
         FileConfiguration config = plugin.getConfig();
         ConfigurationSection section = config.getConfigurationSection("types");
         if (section == null) {
-            plugin.getLogger().warning("Конфиг не содержит секцию types.");
+            logger.warn("Конфиг не содержит секцию types.");
             return;
         }
 
@@ -56,7 +59,7 @@ public class RegionTNTRegistry {
                 types.put(id, type);
             }
         }
-        plugin.getLogger().info("Загружено типов TNT: " + types.size());
+        logger.info("Загружено типов TNT: {}", types.size());
     }
 
     public Collection<RegionTNTType> getTypes() {
@@ -96,7 +99,7 @@ public class RegionTNTRegistry {
             }
             meta.setUnbreakable(settings.unbreakable());
             if (settings.glow()) {
-                meta.addEnchant(Enchantment.DURABILITY, 1, true);
+                meta.addEnchant(Enchantment.UNBREAKING, 1, true);
                 if (!settings.hiddenFlags().contains(ItemFlag.HIDE_ENCHANTS)) {
                     meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                 }
@@ -181,7 +184,7 @@ public class RegionTNTRegistry {
         String materialName = section.getString("material", "TNT");
         Material material = Material.matchMaterial(materialName.toUpperCase(Locale.ROOT));
         if (material == null) {
-            plugin.getLogger().warning("Тип " + id + ": неизвестный материал " + materialName + ". Использую TNT.");
+            logger.warn("Тип {}: неизвестный материал {}. Использую TNT.", id, materialName);
             material = Material.TNT;
         }
         String displayName = section.getString("display-name");
@@ -194,7 +197,7 @@ public class RegionTNTRegistry {
             try {
                 flags.add(ItemFlag.valueOf(raw.toUpperCase(Locale.ROOT)));
             } catch (IllegalArgumentException ex) {
-                plugin.getLogger().warning("Тип " + id + ": неизвестный ItemFlag " + raw);
+                logger.warn("Тип {}: неизвестный ItemFlag {}", id, raw);
             }
         }
         return new RegionTNTType.ItemSettings(material, displayName, lore, glow, customModelData, unbreakable, flags);
@@ -240,7 +243,7 @@ public class RegionTNTRegistry {
             if (material != null) {
                 result.add(material);
             } else {
-                plugin.getLogger().warning("Не удалось распознать материал: " + raw);
+                logger.warn("Не удалось распознать материал: {}", raw);
             }
         }
         return result;
@@ -281,7 +284,7 @@ public class RegionTNTRegistry {
         try {
             return new NamespacedKey(plugin, key.toLowerCase(Locale.ROOT));
         } catch (IllegalArgumentException ex) {
-            plugin.getLogger().log(Level.WARNING, "Некорректный ключ NBT: " + key, ex);
+            logger.warn("Некорректный ключ NBT: {}", key, ex);
             return null;
         }
     }

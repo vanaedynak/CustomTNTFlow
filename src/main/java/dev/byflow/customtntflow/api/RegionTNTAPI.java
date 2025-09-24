@@ -1,16 +1,15 @@
-package com.customtntflow.api;
+package dev.byflow.customtntflow.api;
 
-import com.customtntflow.CustomTNTFlowPlugin;
-import com.customtntflow.type.RegionTNTRegistry;
-import com.customtntflow.type.RegionTNTType;
+import dev.byflow.customtntflow.CustomTNTFlowPlugin;
+import dev.byflow.customtntflow.model.RegionTNTType;
+import dev.byflow.customtntflow.service.RegionTNTRegistry;
 import org.bukkit.entity.Entity;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Optional;
 
 /**
- * Public access point for other плагинов. Позволяет проверить, относится ли предмет или сущность к одному
- * из настраиваемых типов TNT и получить его описание.
+ * Public API entry point for other plugins.
  */
 public final class RegionTNTAPI {
 

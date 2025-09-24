@@ -1,4 +1,4 @@
-package com.customtntflow.type;
+package dev.byflow.customtntflow.model;
 
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemFlag;
@@ -102,4 +102,3 @@ public class RegionTNTType {
         }
     }
 }
-

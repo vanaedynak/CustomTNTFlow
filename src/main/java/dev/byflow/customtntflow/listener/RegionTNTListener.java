@@ -1,9 +1,9 @@
-package com.customtntflow.listener;
+package dev.byflow.customtntflow.listener;
 
-import com.customtntflow.CustomTNTFlowPlugin;
-import com.customtntflow.api.event.RegionTNTDetonateEvent;
-import com.customtntflow.type.RegionTNTRegistry;
-import com.customtntflow.type.RegionTNTType;
+import dev.byflow.customtntflow.CustomTNTFlowPlugin;
+import dev.byflow.customtntflow.api.event.RegionTNTDetonateEvent;
+import dev.byflow.customtntflow.model.RegionTNTType;
+import dev.byflow.customtntflow.service.RegionTNTRegistry;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -42,18 +42,20 @@ public class RegionTNTListener implements Listener {
             if (!behavior.igniteWhenPlaced()) {
                 return;
             }
-            Block block = event.getBlockPlaced();
+            var block = event.getBlockPlaced();
             block.setType(Material.AIR, false);
             var world = block.getWorld();
             var location = block.getLocation().add(0.5, 0.0, 0.5);
-            TNTPrimed primed = (TNTPrimed) world.spawnEntity(location, EntityType.PRIMED_TNT);
+            TNTPrimed primed = (TNTPrimed) world.spawnEntity(location, EntityType.TNT);
             Player player = event.getPlayer();
             primed.setSource(player);
             registry.applyToPrimed(primed, type);
             if (plugin.getConfig().getBoolean("messages.on-place.enabled", true)) {
                 String message = plugin.getConfig().getString("messages.on-place.text", "&eЗаряд активирован!");
                 if (message != null && !message.isEmpty()) {
-                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', message).replace("{type}", type.getId()));
+                    message = message.replace("{type}", type.getId());
+                    message = message.replace("{radius}", String.format("%.1f", behavior.radius()));
+                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
                 }
             }
         });

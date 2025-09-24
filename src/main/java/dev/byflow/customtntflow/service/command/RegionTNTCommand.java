@@ -1,8 +1,8 @@
-package com.customtntflow.command;
+package dev.byflow.customtntflow.service.command;
 
-import com.customtntflow.CustomTNTFlowPlugin;
-import com.customtntflow.type.RegionTNTRegistry;
-import com.customtntflow.type.RegionTNTType;
+import dev.byflow.customtntflow.CustomTNTFlowPlugin;
+import dev.byflow.customtntflow.model.RegionTNTType;
+import dev.byflow.customtntflow.service.RegionTNTRegistry;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Locale;
 
 public class RegionTNTCommand implements CommandExecutor, TabCompleter {
+
+    private static final String ADMIN_PERMISSION = "customtntflow.admin";
 
     private final CustomTNTFlowPlugin plugin;
     private final RegionTNTRegistry registry;
@@ -38,14 +40,14 @@ public class RegionTNTCommand implements CommandExecutor, TabCompleter {
             case "give" -> handleGive(sender, label, args);
             case "list" -> handleList(sender);
             case "reload" -> handleReload(sender);
-            case "info" -> handleInfo(sender, args);
+            case "info" -> handleInfo(sender, label, args);
             default -> sendHelp(sender, label);
         }
         return true;
     }
 
     private void sendHelp(CommandSender sender, String label) {
-        sender.sendMessage(ChatColor.GOLD + "Регионный TNT" + ChatColor.GRAY + " — доступные команды:");
+        sender.sendMessage(ChatColor.GOLD + "Custom TNT Flow" + ChatColor.GRAY + " — доступные команды:");
         sender.sendMessage(ChatColor.YELLOW + "/" + label + " give <player> <type> [amount]" + ChatColor.GRAY + " — выдать TNT");
         sender.sendMessage(ChatColor.YELLOW + "/" + label + " list" + ChatColor.GRAY + " — показать список типов");
         sender.sendMessage(ChatColor.YELLOW + "/" + label + " info <type>" + ChatColor.GRAY + " — подробности по типу");
@@ -53,7 +55,7 @@ public class RegionTNTCommand implements CommandExecutor, TabCompleter {
     }
 
     private void handleGive(CommandSender sender, String label, String[] args) {
-        if (!sender.hasPermission("regiontnt.give")) {
+        if (!sender.hasPermission(ADMIN_PERMISSION)) {
             sender.sendMessage(ChatColor.RED + "У вас нет прав на эту команду.");
             return;
         }
@@ -90,6 +92,10 @@ public class RegionTNTCommand implements CommandExecutor, TabCompleter {
     }
 
     private void handleList(CommandSender sender) {
+        if (!sender.hasPermission(ADMIN_PERMISSION)) {
+            sender.sendMessage(ChatColor.RED + "У вас нет прав на эту команду.");
+            return;
+        }
         if (registry.getTypes().isEmpty()) {
             sender.sendMessage(ChatColor.RED + "В конфиге не описано ни одного типа.");
             return;
@@ -100,9 +106,13 @@ public class RegionTNTCommand implements CommandExecutor, TabCompleter {
         }
     }
 
-    private void handleInfo(CommandSender sender, String[] args) {
+    private void handleInfo(CommandSender sender, String label, String[] args) {
+        if (!sender.hasPermission(ADMIN_PERMISSION)) {
+            sender.sendMessage(ChatColor.RED + "У вас нет прав на эту команду.");
+            return;
+        }
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Использование: /regiontnt info <type>");
+            sender.sendMessage(ChatColor.RED + "Использование: /" + label + " info <type>");
             return;
         }
         RegionTNTType type = registry.getType(args[1]);
@@ -117,12 +127,12 @@ public class RegionTNTCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.GRAY + "Отображаемое имя: " + (item.displayName() != null ? item.displayName() : "(не задано)"));
         sender.sendMessage(ChatColor.GRAY + "Взрыв радиус: " + behavior.radius());
         sender.sendMessage(ChatColor.GRAY + "Ломать блоки: " + behavior.breakBlocks());
-        sender.sendMessage(ChatColor.GRAY + "Только по whitelisт: " + behavior.whitelistOnly());
+        sender.sendMessage(ChatColor.GRAY + "Только по whitelist: " + behavior.whitelistOnly());
         sender.sendMessage(ChatColor.GRAY + "API-only режим: " + behavior.apiOnly());
     }
 
     private void handleReload(CommandSender sender) {
-        if (!sender.hasPermission("regiontnt.reload")) {
+        if (!sender.hasPermission(ADMIN_PERMISSION)) {
             sender.sendMessage(ChatColor.RED + "У вас нет прав на эту команду.");
             return;
         }
