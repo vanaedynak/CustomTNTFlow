@@ -135,7 +135,9 @@ public class TypeConfigurationLoader {
             current = mergeStrategy.merge(current, parent);
         }
 
-        for (MixinReference mixinReference : definition.mixins()) {
+        List<MixinReference> mixinRefs = definition.mixins();
+        for (int i = mixinRefs.size() - 1; i >= 0; i--) {
+            MixinReference mixinReference = mixinRefs.get(i);
             Map<String, Object> mixin = mixins.get(mixinReference.name());
             if (mixin == null) {
                 warnings.add("Тип " + id + ": миксин " + mixinReference.name() + " не найден");
@@ -373,6 +375,20 @@ public class TypeConfigurationLoader {
         }
         if (behavior.apiOnly() && behavior.breakBlocks()) {
             warnings.add("Тип " + typeId + ": api-only=true — break-blocks будет проигнорирован.");
+            behavior = new RegionTNTType.BlockBehavior(
+                    behavior.igniteWhenPlaced(),
+                    false,
+                    behavior.radius(),
+                    behavior.dropBlocks(),
+                    behavior.whitelistOnly(),
+                    behavior.whitelist(),
+                    behavior.blacklist(),
+                    behavior.allowObsidian(),
+                    behavior.allowCryingObsidian(),
+                    behavior.allowFluids(),
+                    behavior.maxBlocks(),
+                    true
+            );
         }
         return behavior;
     }
