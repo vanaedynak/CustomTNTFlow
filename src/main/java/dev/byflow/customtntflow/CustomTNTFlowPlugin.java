@@ -4,7 +4,7 @@ import dev.byflow.customtntflow.api.RegionTNTAPI;
 import dev.byflow.customtntflow.listener.RegionTNTListener;
 import dev.byflow.customtntflow.service.RegionTNTRegistry;
 import dev.byflow.customtntflow.service.command.RegionTNTCommand;
-import org.bukkit.NamespacedKey;
+import dev.byflow.customtntflow.util.PersistentDataKeys;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.slf4j.Logger;
 
@@ -12,7 +12,7 @@ public class CustomTNTFlowPlugin extends JavaPlugin {
 
     private Logger logger;
     private RegionTNTRegistry registry;
-    private NamespacedKey typeKey;
+    private PersistentDataKeys persistentDataKeys;
 
     @Override
     public void onEnable() {
@@ -20,8 +20,8 @@ public class CustomTNTFlowPlugin extends JavaPlugin {
 
         saveDefaultConfig();
 
-        this.typeKey = new NamespacedKey(this, "tnt_type");
-        this.registry = new RegionTNTRegistry(this, typeKey);
+        this.persistentDataKeys = new PersistentDataKeys(this);
+        this.registry = new RegionTNTRegistry(this, persistentDataKeys);
         this.registry.reloadFromConfig();
 
         RegionTNTAPI.initialize(this, registry);
@@ -66,8 +66,8 @@ public class CustomTNTFlowPlugin extends JavaPlugin {
         return registry;
     }
 
-    public NamespacedKey getTypeKey() {
-        return typeKey;
+    public PersistentDataKeys getPersistentDataKeys() {
+        return persistentDataKeys;
     }
 
     public Logger getPluginLogger() {

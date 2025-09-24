@@ -57,7 +57,7 @@ public class RegionTNTListener implements Listener {
             TNTPrimed primed = (TNTPrimed) world.spawnEntity(location, EntityType.TNT);
             Player player = event.getPlayer();
             primed.setSource(player);
-            registry.applyToPrimed(primed, type);
+            registry.applyToPrimed(primed, type, stack, player != null ? player.getUniqueId() : null);
             if (plugin.getConfig().getBoolean("messages.on-place.enabled", true)) {
                 String message = plugin.getConfig().getString("messages.on-place.text", "&eЗаряд активирован!");
                 if (message != null && !message.isEmpty()) {
