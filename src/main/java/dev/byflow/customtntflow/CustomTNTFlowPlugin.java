@@ -54,7 +54,11 @@ public class CustomTNTFlowPlugin extends JavaPlugin {
         reloadConfig();
         registry.reloadFromConfig();
         if (logger != null) {
-            logger.info("Configuration reloaded. Types available: {}", registry.getTypes().size());
+            int warningCount = registry.getLastWarnings().size();
+            logger.info("Configuration reloaded. Types: {}, mixins: {}, warnings: {}",
+                    registry.getTypes().size(),
+                    registry.getLastMixinCount(),
+                    warningCount);
         }
     }
 

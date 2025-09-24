@@ -2,118 +2,78 @@
 messages:
   on-place:
     enabled: true
-    text: "&e[{type}] заряд активирован!"
+    text: "&e[{type}] заряд активирован! Радиус: {radius}"
 
-# Описание всех типов пользовательского TNT.
-# Вы можете создать столько типов, сколько нужно, скопировав и изменив готовые примеры.
-types:
-  default:
-    item:
-      material: TNT
-      display-name: "&6Регионный TNT"
-      lore:
-        - "&7Не наносит урона блокам сам по себе"
-        - "&7Отправляет событие для плагинов приватных регионов"
-      glow: true
-      hidden-flags:
-        - HIDE_ATTRIBUTES
-      persistent-data:
-        origin: customtntflow
-    primed:
-      custom-name: "&6Регионный заряд"
-      show-name: false
-      fuse-ticks: 80
-      power: 4.0
-      incendiary: false
-      gravity: true
-      explode-in-water: false
-      scoreboard-tags:
-        - region_tnt
-      persistent-data:
-        type-id: default
+version: 2
+
+defaults:
+  primed:
+    fuse-ticks: 60
+  behavior:
+    ignite-when-placed: true
+    break-blocks: true
+    api-only: false
+    drop-blocks: false
+    whitelist-only: false
+    whitelist: []
+    blacklist: [BEDROCK]
+    max-blocks: -1
+
+mixins:
+  radius15:
     behavior:
-      ignite-when-placed: true
-      break-blocks: false
-      api-only: true
-      radius: 4.0
-      drop-blocks: false
-      whitelist-only: false
-      whitelist: []
-      blacklist:
-        - BEDROCK
-      allow-obsidian: false
-      allow-crying-obsidian: false
-      allow-fluids: false
-      max-blocks: -1
+      radius: 15.0
+
+  underwater:
+    primed:
+      explode-in-water: true
+    behavior:
+      allow-fluids: true
 
   obsidian_breaker:
-    item:
-      material: TNT
-      display-name: "&5&lОбсидиановый крушитель"
-      lore:
-        - "&dСпециализированный заряд"
-        - "&7Ломает обсидиан и любые блоки из списка"
-      custom-model-data: 123001
-      glow: true
-      hidden-flags:
-        - HIDE_ENCHANTS
-      persistent-data:
-        variant: obsidian_breaker
-    primed:
-      custom-name: "&5Обсидиановая бомба"
-      show-name: true
-      fuse-ticks: 60
-      power: 5.0
-      incendiary: false
-      gravity: true
-      explode-in-water: true
-      scoreboard-tags:
-        - siege_charge
     behavior:
-      ignite-when-placed: true
-      break-blocks: true
-      api-only: false
-      radius: 5.5
-      drop-blocks: false
-      whitelist-only: true
-      whitelist:
-        - OBSIDIAN
-        - CRYING_OBSIDIAN
-        - REINFORCED_DEEPSLATE
-      blacklist:
-        - BEDROCK
       allow-obsidian: true
       allow-crying-obsidian: true
-      allow-fluids: true
-      max-blocks: 128
 
-  water_bomber:
+  no_drops:
+    behavior:
+      drop-blocks: false
+
+  drops:
+    behavior:
+      drop-blocks: true
+
+  whitelist_obsidian_only:
+    behavior:
+      whitelist-only: true
+      whitelist: [OBSIDIAN, CRYING_OBSIDIAN]
+
+types:
+  tire_white_base:
     item:
       material: TNT
-      display-name: "&3Гидробомба"
+      display-name: "&f&lTire White &7[TNT]"
       lore:
-        - "&bРаботает даже под водой"
-        - "&7Ломает блоки и дропает их"
-      glow: false
+        - "&7Базовый каст-TNT"
+      persistent-data:
+        variant: tire_white
     primed:
-      custom-name: "&3Гидробомба"
+      custom-name: "&f&lTire White"
       show-name: false
-      fuse-ticks: 40
-      power: 4.5
-      incendiary: false
-      gravity: true
-      explode-in-water: true
-    behavior:
-      ignite-when-placed: true
-      break-blocks: true
-      api-only: false
-      radius: 4.0
-      drop-blocks: true
-      whitelist-only: false
-      whitelist: []
-      blacklist:
-        - BEDROCK
-      allow-obsidian: false
-      allow-crying-obsidian: false
-      allow-fluids: true
-      max-blocks: -1
+    behavior: {}
+
+  tire_white:
+    extends: tire_white_base
+    use: [radius15, no_drops]
+
+  tire_black:
+    extends: tire_white_base
+    use: [radius15, obsidian_breaker, no_drops]
+
+  tire_hydro_black:
+    extends: tire_black
+    use: [underwater]
+
+merge:
+  lists: "append-dedupe"
+  maps: "deep"

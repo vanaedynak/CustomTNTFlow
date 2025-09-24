@@ -1,12 +1,12 @@
 package dev.byflow.customtntflow.service;
 
 import dev.byflow.customtntflow.CustomTNTFlowPlugin;
+import dev.byflow.customtntflow.config.ConfigLoadResult;
+import dev.byflow.customtntflow.config.TypeConfigurationLoader;
 import dev.byflow.customtntflow.model.RegionTNTType;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.TNTPrimed;
@@ -23,43 +23,37 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 
 public class RegionTNTRegistry {
 
     private final CustomTNTFlowPlugin plugin;
     private final NamespacedKey typeKey;
     private final Logger logger;
+    private final TypeConfigurationLoader configurationLoader;
     private final Map<String, RegionTNTType> types = new LinkedHashMap<>();
+    private int lastMixinCount = 0;
+    private List<String> lastWarnings = List.of();
 
     public RegionTNTRegistry(CustomTNTFlowPlugin plugin, NamespacedKey typeKey) {
         this.plugin = plugin;
         this.typeKey = typeKey;
         this.logger = plugin.getSLF4JLogger();
+        this.configurationLoader = new TypeConfigurationLoader(this.logger);
     }
 
     public void reloadFromConfig() {
         types.clear();
-        FileConfiguration config = plugin.getConfig();
-        ConfigurationSection section = config.getConfigurationSection("types");
-        if (section == null) {
-            logger.warn("Конфиг не содержит секцию types.");
-            return;
-        }
-
-        for (String id : section.getKeys(false)) {
-            ConfigurationSection typeSection = section.getConfigurationSection(id);
-            if (typeSection == null) {
-                continue;
-            }
-            RegionTNTType type = parseType(id, typeSection);
-            if (type != null) {
-                types.put(id, type);
+        ConfigLoadResult result = configurationLoader.load(plugin.getConfig());
+        types.putAll(result.types());
+        lastMixinCount = result.mixinCount();
+        lastWarnings = result.warnings();
+        if (!lastWarnings.isEmpty()) {
+            for (String warning : lastWarnings) {
+                logger.warn(warning);
             }
         }
-        logger.info("Загружено типов TNT: {}", types.size());
+        logger.info("Загружено типов TNT: {}, миксинов: {}", types.size(), lastMixinCount);
     }
 
     public Collection<RegionTNTType> getTypes() {
@@ -165,102 +159,12 @@ public class RegionTNTRegistry {
         return typeKey;
     }
 
-    private RegionTNTType parseType(String id, ConfigurationSection section) {
-        ConfigurationSection itemSection = section.getConfigurationSection("item");
-        ConfigurationSection primedSection = section.getConfigurationSection("primed");
-        RegionTNTType.ItemSettings itemSettings = parseItemSettings(id, itemSection);
-        RegionTNTType.PrimedSettings primedSettings = parsePrimedSettings(primedSection);
-        RegionTNTType.BlockBehavior blockBehavior = parseBlockBehavior(section.getConfigurationSection("behavior"));
-        Map<String, String> itemData = parseStringMap(itemSection != null ? itemSection.getConfigurationSection("persistent-data") : null);
-        Map<String, String> entityData = parseStringMap(primedSection != null ? primedSection.getConfigurationSection("persistent-data") : null);
-        List<String> scoreboardTags = primedSection != null ? primedSection.getStringList("scoreboard-tags") : List.of();
-        return new RegionTNTType(id, itemSettings, primedSettings, blockBehavior, itemData, entityData, scoreboardTags);
+    public int getLastMixinCount() {
+        return lastMixinCount;
     }
 
-    private RegionTNTType.ItemSettings parseItemSettings(String id, ConfigurationSection section) {
-        if (section == null) {
-            return new RegionTNTType.ItemSettings(Material.TNT, null, List.of(), false, null, false, List.of());
-        }
-        String materialName = section.getString("material", "TNT");
-        Material material = Material.matchMaterial(materialName.toUpperCase(Locale.ROOT));
-        if (material == null) {
-            logger.warn("Тип {}: неизвестный материал {}. Использую TNT.", id, materialName);
-            material = Material.TNT;
-        }
-        String displayName = section.getString("display-name");
-        List<String> lore = section.getStringList("lore");
-        boolean glow = section.getBoolean("glow", false);
-        Integer customModelData = section.contains("custom-model-data") ? section.getInt("custom-model-data") : null;
-        boolean unbreakable = section.getBoolean("unbreakable", false);
-        List<ItemFlag> flags = new ArrayList<>();
-        for (String raw : section.getStringList("hidden-flags")) {
-            try {
-                flags.add(ItemFlag.valueOf(raw.toUpperCase(Locale.ROOT)));
-            } catch (IllegalArgumentException ex) {
-                logger.warn("Тип {}: неизвестный ItemFlag {}", id, raw);
-            }
-        }
-        return new RegionTNTType.ItemSettings(material, displayName, lore, glow, customModelData, unbreakable, flags);
-    }
-
-    private RegionTNTType.PrimedSettings parsePrimedSettings(ConfigurationSection section) {
-        if (section == null) {
-            return new RegionTNTType.PrimedSettings(null, false, 80, 4.0f, false, true, false);
-        }
-        String customName = section.getString("custom-name");
-        boolean showName = section.getBoolean("show-name", false);
-        int fuseTicks = section.getInt("fuse-ticks", 80);
-        float power = (float) section.getDouble("power", 4.0);
-        boolean incendiary = section.getBoolean("incendiary", false);
-        boolean gravity = section.getBoolean("gravity", true);
-        boolean explodeInWater = section.getBoolean("explode-in-water", false);
-        return new RegionTNTType.PrimedSettings(customName, showName, fuseTicks, power, incendiary, gravity, explodeInWater);
-    }
-
-    private RegionTNTType.BlockBehavior parseBlockBehavior(ConfigurationSection section) {
-        if (section == null) {
-            return new RegionTNTType.BlockBehavior(true, false, 4.0, false, false, Set.of(), Set.of(), false, false, false, -1, false);
-        }
-        boolean igniteWhenPlaced = section.getBoolean("ignite-when-placed", true);
-        boolean breakBlocks = section.getBoolean("break-blocks", false);
-        double radius = section.getDouble("radius", 4.0);
-        boolean dropBlocks = section.getBoolean("drop-blocks", false);
-        boolean whitelistOnly = section.getBoolean("whitelist-only", false);
-        Set<Material> whitelist = parseMaterials(section.getStringList("whitelist"));
-        Set<Material> blacklist = parseMaterials(section.getStringList("blacklist"));
-        boolean allowObsidian = section.getBoolean("allow-obsidian", false);
-        boolean allowCryingObsidian = section.getBoolean("allow-crying-obsidian", allowObsidian);
-        boolean allowFluids = section.getBoolean("allow-fluids", false);
-        int maxBlocks = section.getInt("max-blocks", -1);
-        boolean apiOnly = section.getBoolean("api-only", false);
-        return new RegionTNTType.BlockBehavior(igniteWhenPlaced, breakBlocks, radius, dropBlocks, whitelistOnly, whitelist, blacklist, allowObsidian, allowCryingObsidian, allowFluids, maxBlocks, apiOnly);
-    }
-
-    private Set<Material> parseMaterials(List<String> list) {
-        Set<Material> result = new java.util.HashSet<>();
-        for (String raw : list) {
-            Material material = Material.matchMaterial(raw.toUpperCase(Locale.ROOT));
-            if (material != null) {
-                result.add(material);
-            } else {
-                logger.warn("Не удалось распознать материал: {}", raw);
-            }
-        }
-        return result;
-    }
-
-    private Map<String, String> parseStringMap(ConfigurationSection section) {
-        Map<String, String> map = new LinkedHashMap<>();
-        if (section == null) {
-            return map;
-        }
-        for (String key : section.getKeys(false)) {
-            Object value = section.get(key);
-            if (value != null) {
-                map.put(key, Objects.toString(value));
-            }
-        }
-        return map;
+    public List<String> getLastWarnings() {
+        return lastWarnings;
     }
 
     private void applyPersistentData(PersistentDataContainer container, Map<String, String> data) {
