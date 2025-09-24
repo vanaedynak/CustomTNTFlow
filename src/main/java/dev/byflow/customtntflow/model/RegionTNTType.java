@@ -89,6 +89,7 @@ public class RegionTNTType {
                                  double radius,
                                  ExplosionShape shape,
                                  boolean dropBlocks,
+                                 Set<Material> dropBlacklist,
                                  boolean whitelistOnly,
                                  Set<Material> whitelist,
                                  Set<Material> blacklist,
@@ -98,6 +99,7 @@ public class RegionTNTType {
                                  int maxBlocks,
                                  boolean apiOnly) {
         public BlockBehavior {
+            dropBlacklist = dropBlacklist == null ? Collections.emptySet() : Set.copyOf(dropBlacklist);
             whitelist = whitelist == null ? Collections.emptySet() : Set.copyOf(whitelist);
             blacklist = blacklist == null ? Collections.emptySet() : Set.copyOf(blacklist);
         }

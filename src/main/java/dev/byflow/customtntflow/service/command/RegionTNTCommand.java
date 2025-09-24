@@ -153,6 +153,7 @@ public class RegionTNTCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.GRAY + "Радиус: " + String.format(Locale.ROOT, "%.1f", behavior.radius()) + " (" + behavior.shape() + ")");
         sender.sendMessage(ChatColor.GRAY + "Ломать блоки: " + formatBoolean(behavior.breakBlocks()));
         sender.sendMessage(ChatColor.GRAY + "Дроп блоков: " + formatBoolean(behavior.dropBlocks()));
+        sender.sendMessage(ChatColor.GRAY + "Без дропа: " + formatMaterials(behavior.dropBlacklist()));
         sender.sendMessage(ChatColor.GRAY + "Белый список: " + formatBoolean(behavior.whitelistOnly()));
         sender.sendMessage(ChatColor.GRAY + "Whitelist: " + formatMaterials(behavior.whitelist()));
         sender.sendMessage(ChatColor.GRAY + "Blacklist: " + formatMaterials(behavior.blacklist()));

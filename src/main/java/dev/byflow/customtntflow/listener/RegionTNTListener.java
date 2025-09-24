@@ -153,7 +153,8 @@ public class RegionTNTListener implements Listener {
             blocksToBreak = new ArrayList<>(blocksToBreak.subList(0, maxBlocks));
         }
         boolean dropBlocks = behavior.dropBlocks();
-        processBlockBreaks(blocksToBreak, dropBlocks);
+        Set<Material> dropBlacklist = behavior.dropBlacklist();
+        processBlockBreaks(blocksToBreak, dropBlocks, dropBlacklist);
     }
 
     private RegionTNTDetonateEvent callDetonateEvent(TNTPrimed tnt, RegionTNTType type, List<Block> blocks) {
@@ -162,12 +163,12 @@ public class RegionTNTListener implements Listener {
         return customEvent;
     }
 
-    private void processBlockBreaks(List<Block> blocks, boolean dropBlocks) {
+    private void processBlockBreaks(List<Block> blocks, boolean dropBlocks, Set<Material> dropBlacklist) {
         if (blocks.isEmpty()) {
             return;
         }
         if (blocks.size() <= BLOCKS_PER_TICK) {
-            breakBatch(blocks, dropBlocks);
+            breakBatch(blocks, dropBlocks, dropBlacklist);
             return;
         }
         List<Block> queue = new ArrayList<>(blocks);
@@ -178,7 +179,7 @@ public class RegionTNTListener implements Listener {
             public void run() {
                 int processed = 0;
                 while (index < queue.size() && processed < BLOCKS_PER_TICK) {
-                    breakBlock(queue.get(index++), dropBlocks);
+                    breakBlock(queue.get(index++), dropBlocks, dropBlacklist);
                     processed++;
                 }
                 if (index >= queue.size()) {
@@ -188,20 +189,21 @@ public class RegionTNTListener implements Listener {
         }.runTaskTimer(plugin, 0L, 1L);
     }
 
-    private void breakBatch(List<Block> blocks, boolean dropBlocks) {
+    private void breakBatch(List<Block> blocks, boolean dropBlocks, Set<Material> dropBlacklist) {
         for (Block block : blocks) {
-            breakBlock(block, dropBlocks);
+            breakBlock(block, dropBlocks, dropBlacklist);
         }
     }
 
-    private void breakBlock(Block block, boolean dropBlocks) {
+    private void breakBlock(Block block, boolean dropBlocks, Set<Material> dropBlacklist) {
         var world = block.getWorld();
         int chunkX = block.getX() >> 4;
         int chunkZ = block.getZ() >> 4;
         if (!world.isChunkLoaded(chunkX, chunkZ)) {
             return;
         }
-        if (dropBlocks) {
+        boolean shouldDrop = dropBlocks && (dropBlacklist == null || !dropBlacklist.contains(block.getType()));
+        if (shouldDrop) {
             block.breakNaturally();
         } else {
             block.setType(Material.AIR, false);

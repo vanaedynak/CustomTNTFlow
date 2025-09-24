@@ -357,7 +357,7 @@ public class TypeConfigurationLoader {
 
     private RegionTNTType.BlockBehavior parseBlockBehavior(ConfigurationSection section, List<String> warnings, String typeId) {
         if (section == null) {
-            RegionTNTType.BlockBehavior behavior = new RegionTNTType.BlockBehavior(true, false, 4.0, ExplosionShape.SPHERE, true, false, Set.of(), Set.of(), false, false, false, -1, false);
+            RegionTNTType.BlockBehavior behavior = new RegionTNTType.BlockBehavior(true, false, 4.0, ExplosionShape.SPHERE, true, Set.of(), false, Set.of(), Set.of(), false, false, false, -1, false);
             return validateBehavior(behavior, warnings, typeId);
         }
         boolean igniteWhenPlaced = section.getBoolean("ignite-when-placed", true);
@@ -365,6 +365,7 @@ public class TypeConfigurationLoader {
         double radius = section.getDouble("radius", 4.0);
         ExplosionShape shape = ExplosionShape.fromConfig(section.getString("shape"));
         boolean dropBlocks = section.getBoolean("drop-blocks", true);
+        Set<Material> dropBlacklist = parseMaterials(section.getStringList("drop-blacklist"));
         boolean whitelistOnly = section.getBoolean("whitelist-only", false);
         Set<Material> whitelist = parseMaterials(section.getStringList("whitelist"));
         Set<Material> blacklist = parseMaterials(section.getStringList("blacklist"));
@@ -374,18 +375,18 @@ public class TypeConfigurationLoader {
         int maxBlocks = section.getInt("max-blocks", -1);
         boolean apiOnly = section.getBoolean("api-only", false);
 
-        RegionTNTType.BlockBehavior behavior = new RegionTNTType.BlockBehavior(igniteWhenPlaced, breakBlocks, radius, shape, dropBlocks, whitelistOnly, whitelist, blacklist, allowObsidian, allowCryingObsidian, allowFluids, maxBlocks, apiOnly);
+        RegionTNTType.BlockBehavior behavior = new RegionTNTType.BlockBehavior(igniteWhenPlaced, breakBlocks, radius, shape, dropBlocks, dropBlacklist, whitelistOnly, whitelist, blacklist, allowObsidian, allowCryingObsidian, allowFluids, maxBlocks, apiOnly);
         return validateBehavior(behavior, warnings, typeId);
     }
 
     private RegionTNTType.BlockBehavior validateBehavior(RegionTNTType.BlockBehavior behavior, List<String> warnings, String typeId) {
         if (behavior.radius() <= 0) {
             warnings.add("Тип " + typeId + ": radius должен быть больше 0. Используется значение 1.0");
-            behavior = new RegionTNTType.BlockBehavior(behavior.igniteWhenPlaced(), behavior.breakBlocks(), 1.0, behavior.shape(), behavior.dropBlocks(), behavior.whitelistOnly(), behavior.whitelist(), behavior.blacklist(), behavior.allowObsidian(), behavior.allowCryingObsidian(), behavior.allowFluids(), behavior.maxBlocks(), behavior.apiOnly());
+            behavior = new RegionTNTType.BlockBehavior(behavior.igniteWhenPlaced(), behavior.breakBlocks(), 1.0, behavior.shape(), behavior.dropBlocks(), behavior.dropBlacklist(), behavior.whitelistOnly(), behavior.whitelist(), behavior.blacklist(), behavior.allowObsidian(), behavior.allowCryingObsidian(), behavior.allowFluids(), behavior.maxBlocks(), behavior.apiOnly());
         }
         if (behavior.maxBlocks() != -1 && behavior.maxBlocks() < 0) {
             warnings.add("Тип " + typeId + ": max-blocks должен быть -1 или неотрицательным. Используется -1.");
-            behavior = new RegionTNTType.BlockBehavior(behavior.igniteWhenPlaced(), behavior.breakBlocks(), behavior.radius(), behavior.shape(), behavior.dropBlocks(), behavior.whitelistOnly(), behavior.whitelist(), behavior.blacklist(), behavior.allowObsidian(), behavior.allowCryingObsidian(), behavior.allowFluids(), -1, behavior.apiOnly());
+            behavior = new RegionTNTType.BlockBehavior(behavior.igniteWhenPlaced(), behavior.breakBlocks(), behavior.radius(), behavior.shape(), behavior.dropBlocks(), behavior.dropBlacklist(), behavior.whitelistOnly(), behavior.whitelist(), behavior.blacklist(), behavior.allowObsidian(), behavior.allowCryingObsidian(), behavior.allowFluids(), -1, behavior.apiOnly());
         }
         if (behavior.whitelistOnly() && behavior.whitelist().isEmpty()) {
             warnings.add("Тип " + typeId + ": whitelist-only=true, но список whitelist пуст.");
@@ -398,6 +399,7 @@ public class TypeConfigurationLoader {
                     behavior.radius(),
                     behavior.shape(),
                     behavior.dropBlocks(),
+                    behavior.dropBlacklist(),
                     behavior.whitelistOnly(),
                     behavior.whitelist(),
                     behavior.blacklist(),

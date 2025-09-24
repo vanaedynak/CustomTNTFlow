@@ -24,9 +24,34 @@ defaults:
     break-blocks: true
     api-only: false
     drop-blocks: true
+    drop-blacklist:
+      - STONE
+      - DEEPSLATE
+      - COAL_ORE
+      - DEEPSLATE_COAL_ORE
+      - COPPER_ORE
+      - DEEPSLATE_COPPER_ORE
+      - IRON_ORE
+      - DEEPSLATE_IRON_ORE
+      - GOLD_ORE
+      - DEEPSLATE_GOLD_ORE
+      - REDSTONE_ORE
+      - DEEPSLATE_REDSTONE_ORE
+      - LAPIS_ORE
+      - DEEPSLATE_LAPIS_ORE
+      - EMERALD_ORE
+      - DEEPSLATE_EMERALD_ORE
+      - NETHER_GOLD_ORE
+      - NETHER_QUARTZ_ORE
+      - ANCIENT_DEBRIS
+      - DIRT
+      - GRASS_BLOCK
+      - COARSE_DIRT
+      - PODZOL
+      - ROOTED_DIRT
     whitelist-only: false
     whitelist: []
-    blacklist: [BEDROCK]
+    blacklist: [BEDROCK, NETHERITE_BLOCK]
     max-blocks: -1
 
 mixins:
@@ -57,6 +82,14 @@ mixins:
     behavior:
       whitelist-only: true
       whitelist: [OBSIDIAN, CRYING_OBSIDIAN]
+
+  whitelist_netherite_example:
+    behavior:
+      whitelist-only: true
+      whitelist:
+        - STONE
+        - DIRT
+        - NETHERITE_BLOCK # пример: перечислите блоки, которые разрешено ломать
 
 types:
   radius15_water_obsidian:

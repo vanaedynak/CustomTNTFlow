@@ -21,6 +21,7 @@ public final class MutableBlockBehavior {
     private ExplosionShape shape;
     private boolean dropBlocks;
     private boolean whitelistOnly;
+    private final Set<Material> dropBlacklist;
     private final Set<Material> whitelist;
     private final Set<Material> blacklist;
     private boolean allowObsidian;
@@ -36,6 +37,7 @@ public final class MutableBlockBehavior {
         this.shape = behavior.shape();
         this.dropBlocks = behavior.dropBlocks();
         this.whitelistOnly = behavior.whitelistOnly();
+        this.dropBlacklist = new LinkedHashSet<>(behavior.dropBlacklist());
         this.whitelist = new LinkedHashSet<>(behavior.whitelist());
         this.blacklist = new LinkedHashSet<>(behavior.blacklist());
         this.allowObsidian = behavior.allowObsidian();
@@ -57,6 +59,7 @@ public final class MutableBlockBehavior {
                 radius,
                 shape,
                 dropBlocks,
+                dropBlacklist,
                 whitelistOnly,
                 whitelist,
                 blacklist,
@@ -114,6 +117,17 @@ public final class MutableBlockBehavior {
 
     public void setWhitelistOnly(boolean whitelistOnly) {
         this.whitelistOnly = whitelistOnly;
+    }
+
+    public Set<Material> getDropBlacklist() {
+        return dropBlacklist;
+    }
+
+    public void setDropBlacklist(Collection<Material> blacklist) {
+        this.dropBlacklist.clear();
+        if (blacklist != null) {
+            this.dropBlacklist.addAll(blacklist);
+        }
     }
 
     public Set<Material> getWhitelist() {

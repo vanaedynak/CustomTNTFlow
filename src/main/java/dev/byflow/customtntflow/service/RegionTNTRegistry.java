@@ -413,12 +413,13 @@ public class RegionTNTRegistry {
         for (RegionTNTType type : types.values()) {
             RegionTNTType.BlockBehavior behavior = type.getBlockBehavior();
             logger.info(
-                    "[debug] Параметры {} => radius={}, shape={}, break-blocks={}, drop-blocks={}, allow-fluids={}, allow-obsidian={}, allow-crying-obsidian={}, whitelist-only={}, whitelist={}, blacklist={}, max-blocks={}, api-only={}",
+                    "[debug] Параметры {} => radius={}, shape={}, break-blocks={}, drop-blocks={}, drop-blacklist={}, allow-fluids={}, allow-obsidian={}, allow-crying-obsidian={}, whitelist-only={}, whitelist={}, blacklist={}, max-blocks={}, api-only={}",
                     type.getId(),
                     formatRadius(behavior.radius()),
                     behavior.shape(),
                     behavior.breakBlocks(),
                     behavior.dropBlocks(),
+                    formatMaterials(behavior.dropBlacklist()),
                     behavior.allowFluids(),
                     behavior.allowObsidian(),
                     behavior.allowCryingObsidian(),
@@ -487,6 +488,7 @@ public class RegionTNTRegistry {
         first = appendBoolean(json, "igniteWhenPlaced", behavior.igniteWhenPlaced(), first);
         first = appendBoolean(json, "breakBlocks", behavior.breakBlocks(), first);
         first = appendBoolean(json, "dropBlocks", behavior.dropBlocks(), first);
+        first = appendMaterials(json, "dropBlacklist", behavior.dropBlacklist(), first);
         first = appendBoolean(json, "allowFluids", behavior.allowFluids(), first);
         first = appendBoolean(json, "allowObsidian", behavior.allowObsidian(), first);
         first = appendBoolean(json, "allowCryingObsidian", behavior.allowCryingObsidian(), first);
