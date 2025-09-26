@@ -310,9 +310,10 @@ public class TypeConfigurationLoader {
 
         Map<String, String> itemData = parseStringMap(itemSection != null ? itemSection.getConfigurationSection("persistent-data") : null);
         Map<String, String> entityData = parseStringMap(primedSection != null ? primedSection.getConfigurationSection("persistent-data") : null);
+        Map<String, Object> entityNbtMarkers = parseNbtMarkers(primedSection != null ? primedSection.getConfigurationSection("nbt-markers") : null, warnings, id);
         List<String> scoreboardTags = primedSection != null ? primedSection.getStringList("scoreboard-tags") : List.of();
 
-        return new RegionTNTType(id, itemSettings, primedSettings, blockBehavior, itemData, entityData, scoreboardTags);
+        return new RegionTNTType(id, itemSettings, primedSettings, blockBehavior, itemData, entityData, entityNbtMarkers, scoreboardTags);
     }
 
     private RegionTNTType.ItemSettings parseItemSettings(String id, ConfigurationSection section) {
@@ -438,6 +439,24 @@ public class TypeConfigurationLoader {
             Object value = section.get(key);
             if (value != null) {
                 map.put(key, Objects.toString(value));
+            }
+        }
+        return map;
+    }
+
+    private Map<String, Object> parseNbtMarkers(ConfigurationSection section, List<String> warnings, String typeId) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        if (section == null) {
+            return map;
+        }
+        for (String key : section.getKeys(false)) {
+            Object value = section.get(key);
+            if (value instanceof ConfigurationSection || value instanceof List<?>) {
+                warnings.add("Тип " + typeId + ": nbt-markers поддерживает только простые значения (строки, числа, boolean). Ключ " + key + " будет проигнорирован.");
+                continue;
+            }
+            if (value != null) {
+                map.put(key, value);
             }
         }
         return map;

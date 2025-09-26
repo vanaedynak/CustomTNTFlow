@@ -6,6 +6,7 @@ import dev.byflow.customtntflow.model.DebugFlag;
 import dev.byflow.customtntflow.model.DebugSettings;
 import dev.byflow.customtntflow.service.RegionTNTRegistry;
 import dev.byflow.customtntflow.service.command.RegionTNTCommand;
+import dev.byflow.customtntflow.service.nbt.NbtService;
 import dev.byflow.customtntflow.service.region.RegionIntegrationService;
 import dev.byflow.customtntflow.util.PersistentDataKeys;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -17,6 +18,7 @@ public class CustomTNTFlowPlugin extends JavaPlugin {
     private RegionTNTRegistry registry;
     private PersistentDataKeys persistentDataKeys;
     private RegionIntegrationService regionIntegrationService;
+    private NbtService nbtService;
     private DebugSettings debugSettings = DebugSettings.defaults();
 
     @Override
@@ -29,7 +31,8 @@ public class CustomTNTFlowPlugin extends JavaPlugin {
 
         this.persistentDataKeys = new PersistentDataKeys(this);
         this.regionIntegrationService = new RegionIntegrationService(this);
-        this.registry = new RegionTNTRegistry(this, persistentDataKeys);
+        this.nbtService = new NbtService(logger);
+        this.registry = new RegionTNTRegistry(this, persistentDataKeys, nbtService);
         this.registry.applyDebugSettings(debugSettings);
         this.registry.reloadFromConfig();
         this.regionIntegrationService.reload();

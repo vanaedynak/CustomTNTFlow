@@ -16,6 +16,7 @@ repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://maven.enginehub.org/repo/")
+    maven("https://repo.codemc.org/repository/maven-public/")
 }
 
 dependencies {
@@ -23,6 +24,7 @@ dependencies {
     compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.9")
     compileOnly("com.sk89q.worldguard:worldguard-core:7.0.9")
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.2.15")
+    compileOnly("de.tr7zw:item-nbt-api:2.12.3")
 }
 
 tasks.withType<JavaCompile>().configureEach {

@@ -19,6 +19,8 @@ version: 2
 defaults:
   primed:
     fuse-ticks: 60
+    nbt-markers:
+      CustomTNTFlowType: "{type}"
   behavior:
     ignite-when-placed: true
     break-blocks: true
@@ -118,6 +120,8 @@ types:
     primed:
       custom-name: "&f&lTire White"
       show-name: false
+      nbt-markers:
+        CustomTNTFlowRadius: "{radius}"
     behavior: {}
 
   tire_white:
