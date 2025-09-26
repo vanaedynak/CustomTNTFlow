@@ -16,6 +16,7 @@ public class RegionTNTType {
     private final BlockBehavior blockBehavior;
     private final Map<String, String> itemPersistentData;
     private final Map<String, String> entityPersistentData;
+    private final Map<String, Object> entityNbtMarkers;
     private final List<String> scoreboardTags;
 
     public RegionTNTType(String id,
@@ -24,14 +25,16 @@ public class RegionTNTType {
                          BlockBehavior blockBehavior,
                          Map<String, String> itemPersistentData,
                          Map<String, String> entityPersistentData,
+                         Map<String, Object> entityNbtMarkers,
                          List<String> scoreboardTags) {
         this.id = id;
         this.itemSettings = itemSettings;
         this.primedSettings = primedSettings;
         this.blockBehavior = blockBehavior;
-        this.itemPersistentData = itemPersistentData;
-        this.entityPersistentData = entityPersistentData;
-        this.scoreboardTags = scoreboardTags;
+        this.itemPersistentData = itemPersistentData == null ? Map.of() : Map.copyOf(itemPersistentData);
+        this.entityPersistentData = entityPersistentData == null ? Map.of() : Map.copyOf(entityPersistentData);
+        this.entityNbtMarkers = entityNbtMarkers == null ? Map.of() : Map.copyOf(entityNbtMarkers);
+        this.scoreboardTags = scoreboardTags == null ? List.of() : List.copyOf(scoreboardTags);
     }
 
     public String getId() {
@@ -56,6 +59,10 @@ public class RegionTNTType {
 
     public Map<String, String> getEntityPersistentData() {
         return entityPersistentData;
+    }
+
+    public Map<String, Object> getEntityNbtMarkers() {
+        return entityNbtMarkers;
     }
 
     public List<String> getScoreboardTags() {

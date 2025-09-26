@@ -7,6 +7,7 @@ import dev.byflow.customtntflow.model.DebugFlag;
 import dev.byflow.customtntflow.model.DebugSettings;
 import dev.byflow.customtntflow.model.RegionTNTType;
 import dev.byflow.customtntflow.model.TypeMetadata;
+import dev.byflow.customtntflow.service.nbt.NbtService;
 import dev.byflow.customtntflow.util.PersistentDataKeys;
 import dev.byflow.customtntflow.util.TraitSnapshotParser;
 import org.bukkit.ChatColor;
@@ -46,6 +47,7 @@ public class RegionTNTRegistry {
     private final Logger logger;
     private final TraitSnapshotParser traitParser = new TraitSnapshotParser();
     private final TypeConfigurationLoader configurationLoader;
+    private final NbtService nbtService;
     private final Map<String, RegionTNTType> types = new LinkedHashMap<>();
     private final Map<String, TypeMetadata> metadata = new LinkedHashMap<>();
     private int lastMixinCount = 0;
@@ -53,7 +55,7 @@ public class RegionTNTRegistry {
     private List<String> lastErrors = List.of();
     private DebugSettings debugSettings = DebugSettings.defaults();
 
-    public RegionTNTRegistry(CustomTNTFlowPlugin plugin, PersistentDataKeys dataKeys) {
+    public RegionTNTRegistry(CustomTNTFlowPlugin plugin, PersistentDataKeys dataKeys, NbtService nbtService) {
         this.plugin = plugin;
         this.typeKey = dataKeys.type();
         this.legacyTypeKey = dataKeys.legacyType();
@@ -63,6 +65,7 @@ public class RegionTNTRegistry {
         this.explodeIdKey = dataKeys.explodeId();
         this.logger = plugin.getSLF4JLogger();
         this.configurationLoader = new TypeConfigurationLoader(this.logger);
+        this.nbtService = nbtService;
     }
 
     public void reloadFromConfig() {
@@ -231,6 +234,8 @@ public class RegionTNTRegistry {
         } else {
             container.remove(ownerKey);
         }
+        Map<String, Object> nbtMarkers = applyNbtPlaceholders(type.getEntityNbtMarkers(), type);
+        nbtService.applyEntityMarkers(tnt, nbtMarkers);
         for (String tag : type.getScoreboardTags()) {
             tnt.addScoreboardTag(tag);
         }
@@ -372,12 +377,33 @@ public class RegionTNTRegistry {
     }
 
     private String applyItemPlaceholders(String text, RegionTNTType type) {
+        return applyPlaceholders(text, type);
+    }
+
+    private Map<String, Object> applyNbtPlaceholders(Map<String, Object> markers, RegionTNTType type) {
+        if (markers == null || markers.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : markers.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof String string) {
+                result.put(entry.getKey(), applyPlaceholders(string, type));
+            } else {
+                result.put(entry.getKey(), value);
+            }
+        }
+        return result;
+    }
+
+    private String applyPlaceholders(String text, RegionTNTType type) {
         if (text == null) {
             return null;
         }
         RegionTNTType.BlockBehavior behavior = type.getBlockBehavior();
         RegionTNTType.PrimedSettings primed = type.getPrimedSettings();
-        String replaced = text.replace("{radius}", formatRadius(behavior.radius()));
+        String replaced = text.replace("{type}", type.getId());
+        replaced = replaced.replace("{radius}", formatRadius(behavior.radius()));
         replaced = replaced.replace("{drops}", behavior.dropBlocks() ? "Да" : "Нет");
         boolean obsidian = behavior.allowObsidian() || behavior.allowCryingObsidian();
         replaced = replaced.replace("{obsidian}", obsidian ? "Да" : "Нет");
